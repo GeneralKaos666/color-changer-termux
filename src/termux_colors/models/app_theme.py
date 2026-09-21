@@ -18,16 +18,24 @@ class FieldSpec:
     minimum: int | None = None
     maximum: int | None = None
     help: str = ""
+    section: str = "general"
 
 
 CURATED_FIELDS: tuple[FieldSpec, ...] = (
-    FieldSpec("use-black-ui", "Black UI", "bool", help="Use a black background in the app UI."),
-    FieldSpec("fullscreen", "Fullscreen", "bool", help="Hide the status bar."),
+    FieldSpec(
+        "use-black-ui",
+        "Black UI",
+        "bool",
+        help="Use a black background in the app UI.",
+        section="appearance",
+    ),
+    FieldSpec("fullscreen", "Fullscreen", "bool", help="Hide the status bar.", section="appearance"),
     FieldSpec(
         "terminal-cursor-style",
         "Cursor style",
         "choice",
         choices=("block", "bar", "underline"),
+        section="terminal",
     ),
     FieldSpec(
         "terminal-cursor-blink-rate",
@@ -36,15 +44,31 @@ CURATED_FIELDS: tuple[FieldSpec, ...] = (
         minimum=0,
         maximum=2000,
         help="0 disables blinking.",
+        section="terminal",
     ),
-    FieldSpec("terminal-margin-horizontal", "Margin horizontal", "int", minimum=0, maximum=50),
-    FieldSpec("terminal-margin-vertical", "Margin vertical", "int", minimum=0, maximum=50),
+    FieldSpec(
+        "terminal-margin-horizontal",
+        "Margin horizontal",
+        "int",
+        minimum=0,
+        maximum=50,
+        section="terminal",
+    ),
+    FieldSpec(
+        "terminal-margin-vertical",
+        "Margin vertical",
+        "int",
+        minimum=0,
+        maximum=50,
+        section="terminal",
+    ),
     FieldSpec(
         "terminal-transcript-rows",
         "Transcript rows",
         "int",
         minimum=100,
         maximum=50000,
+        section="terminal",
     ),
     FieldSpec(
         "bell-character",
@@ -52,8 +76,9 @@ CURATED_FIELDS: tuple[FieldSpec, ...] = (
         "choice",
         choices=("beep", "vibrate", "ignore"),
         help="What happens when an application rings the bell.",
+        section="behaviour",
     ),
-    FieldSpec("allow-external-apps", "Allow external apps", "bool"),
+    FieldSpec("allow-external-apps", "Allow external apps", "bool", section="behaviour"),
 )
 
 CURATED_KEYS: tuple[str, ...] = tuple(spec.key for spec in CURATED_FIELDS)

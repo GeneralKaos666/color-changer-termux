@@ -67,6 +67,21 @@ def active_theme_path(colors_properties: Path) -> Path | None:
     return Path(os.path.realpath(colors_properties))
 
 
+def active_colors():
+    """Return the colours currently configured, or the defaults when unset."""
+    from .models.colors import TerminalColors
+    from .paths import colors_properties_path
+    from .persistence.colors_io import read_colors
+
+    path = colors_properties_path()
+    if path.exists() or path.is_symlink():
+        try:
+            return read_colors(path)
+        except OSError:
+            pass
+    return TerminalColors()
+
+
 def apply_theme(theme_path: Path, colors_properties: Path) -> None:
     """Point ``colors.properties`` at *theme_path* and reload Termux.
 

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import re
 
+from rich.text import Text
 from textual import work
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Input, Label, Static
 
@@ -21,8 +22,16 @@ from ..models.colors import (
 from ..paths import backups_dir, colors_properties_path, colors_root
 from ..persistence.backup import make_backup
 from ..persistence.colors_io import read_colors, write_colors
-from ..widgets import colors_preview_text
+from ..theme import apply_app_theme
+from ..widgets import (
+    colors_preview_text,
+    mock_lines,
+    palette_strip,
+    swatch_text,
+)
 from .dialogs import ConfirmScreen, MessageScreen, PromptScreen
+
+BASIC_KEYS = ("background", "foreground", "cursor")
 
 
 def _sanitize(name: str) -> str:
@@ -47,22 +56,26 @@ class TerminalEditorScreen(Screen):
         yield Header(show_clock=False)
         with Horizontal(id="editor"):
             with VerticalScroll(id="editor-form"):
-                yield Static(self.screen_title, classes="panel-title")
-                yield Label("Background")
-                yield Input(value=self.base.background, id="field-background")
-                yield Label("Foreground")
-                yield Input(value=self.base.foreground, id="field-foreground")
-                yield Label("Cursor")
-                yield Input(value=self.base.cursor, id="field-cursor")
+                yield Static("basics", classes="section-rule")
+                for key in BASIC_KEYS:
+                    yield Label(key, classes="field-label")
+                    with Horizontal(classes="field-row"):
+                        yield Static(id=f"swatch-{key}", classes="field-swatch")
+                        yield Input(value=self.base.as_dict().get(key, ""), id=f"field-{key}")
+                yield Static("ansi palette", classes="section-rule")
                 for index, key in enumerate(PALETTE_KEYS):
-                    yield Label(f"{key}  ({ANSI_NAMES[index]})")
-                    yield Input(value=self.base.palette[index], id=f"field-{key}")
-            with Vertical(id="editor-preview"):
-                yield Static("Preview", classes="panel-title")
-                yield Static(id="preview")
+                    yield Label(f"{key}  ({ANSI_NAMES[index]})", classes="field-label")
+                    with Horizontal(classes="field-row"):
+                        yield Static(id=f"swatch-{key}", classes="field-swatch")
+                        yield Input(value=self.base.palette[index], id=f"field-{key}")
+            with VerticalScroll(id="editor-preview"):
+                yield Static(id="preview-name")
+                yield Static(id="preview-mock")
+                yield Static(id="preview-swatches")
+                yield Static(id="preview-strip")
         with Horizontal(id="actions"):
             yield Button("Save", variant="primary", id="save")
-            yield Button("Save As...", id="save-as")
+            yield Button("Save As…", id="save-as")
             yield Button("Revert", id="revert")
             yield Button("Back", id="back")
         yield Footer()
@@ -70,10 +83,12 @@ class TerminalEditorScreen(Screen):
     def on_mount(self) -> None:
         for key in self._field_keys():
             self._inputs[key] = self.query_one(f"#field-{key}", Input)
+        self.query_one("#editor-form", VerticalScroll).border_title = self.screen_title.lower()
+        self.query_one("#editor-preview", VerticalScroll).border_title = "preview"
         self._update_preview()
 
     def _field_keys(self) -> list[str]:
-        return ["background", "foreground", "cursor", *PALETTE_KEYS]
+        return [*BASIC_KEYS, *PALETTE_KEYS]
 
     def on_input_changed(self, event: Input.Changed) -> None:
         self._update_preview()
@@ -84,15 +99,32 @@ class TerminalEditorScreen(Screen):
             value = widget.value.strip()
             if not is_valid_hex(value):
                 continue
-            if key in ("background", "foreground", "cursor"):
+            if key in BASIC_KEYS:
                 setattr(colors, key, value)
             else:
-                index = PALETTE_KEYS.index(key)
-                colors.palette[index] = value
+                colors.palette[PALETTE_KEYS.index(key)] = value
         return colors
 
     def _update_preview(self) -> None:
-        self.query_one("#preview", Static).update(colors_preview_text(self._current_colors()))
+        colors = self._current_colors()
+        apply_app_theme(self.app, colors)
+
+        for key, widget in self._inputs.items():
+            value = widget.value.strip()
+            valid = is_valid_hex(value)
+            widget.set_class(bool(value) and not valid, "input-error")
+            swatch = self.query_one(f"#swatch-{key}", Static)
+            swatch.update(swatch_text(value) if valid else Text(" "))
+
+        self.query_one("#preview-name", Static).update("[b]live preview[/]")
+        session = mock_lines(colors)[:5]
+        mock = Text()
+        for line in session:
+            mock.append_text(line)
+            mock.append("\n")
+        self.query_one("#preview-mock", Static).update(mock)
+        self.query_one("#preview-swatches", Static).update(colors_preview_text(colors))
+        self.query_one("#preview-strip", Static).update(palette_strip(colors))
 
     def _collect(self) -> TerminalColors:
         colors = self.base.copy()
@@ -104,7 +136,7 @@ class TerminalEditorScreen(Screen):
             except ValueError:
                 invalid.append(key)
                 continue
-            if key in ("background", "foreground", "cursor"):
+            if key in BASIC_KEYS:
                 setattr(colors, key, normalized)
             else:
                 colors.palette[PALETTE_KEYS.index(key)] = normalized
@@ -124,11 +156,12 @@ class TerminalEditorScreen(Screen):
             self.app.pop_screen()
 
     def action_revert(self) -> None:
-        self.base = read_colors(self.active_path) if self.active_path else self.base
+        self.base = read_colors(self.active_path) if self.active_path else TerminalColors()
         values = self.base.as_dict()
         for key, widget in self._inputs.items():
             widget.value = values.get(key, "")
         self._update_preview()
+        self.notify("Reverted to the saved values.")
 
     async def _maybe_backup(self) -> None:
         colors_properties = colors_properties_path()

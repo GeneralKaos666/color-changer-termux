@@ -16,6 +16,13 @@ from ..persistence.theme_io import read_app_theme, write_app_theme
 from .dialogs import ConfirmScreen, MessageScreen
 
 
+def _sections() -> dict[str, list[FieldSpec]]:
+    grouped: dict[str, list[FieldSpec]] = {}
+    for spec in CURATED_FIELDS:
+        grouped.setdefault(spec.section, []).append(spec)
+    return grouped
+
+
 class AppThemeEditorScreen(Screen):
     """Form editor for a safe subset of ``termux.properties``."""
 
@@ -26,9 +33,6 @@ class AppThemeEditorScreen(Screen):
         self.path = termux_properties_path()
         self.theme = read_app_theme(self.path)
         self._widgets: dict[str, object] = {}
-
-    def _next_value(self, spec: FieldSpec) -> str:
-        return self.theme.get(spec.key, "")
 
     def _build_select(self, spec: FieldSpec, current: str) -> Select:
         options = [("true", "true"), ("false", "false")] if spec.kind == "bool" else [
@@ -41,15 +45,17 @@ class AppThemeEditorScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=False)
         with VerticalScroll(id="editor-form"):
-            yield Static("App Theme", classes="panel-title")
             yield Static(f"Editing {self.path}", classes="hint")
-            for spec in CURATED_FIELDS:
-                current = self._next_value(spec)
-                yield Label(spec.label + (f"  ({spec.help})" if spec.help else ""))
-                if spec.kind in ("bool", "choice"):
-                    yield self._build_select(spec, current)
-                else:
-                    yield Input(value=current, id=f"field-{spec.key}")
+            for section, specs in _sections().items():
+                yield Static(section, classes="section-rule")
+                for spec in specs:
+                    current = self.theme.get(spec.key, "")
+                    label = spec.label + (f"  ·  {spec.help}" if spec.help else "")
+                    yield Label(label, classes="field-label")
+                    if spec.kind in ("bool", "choice"):
+                        yield self._build_select(spec, current)
+                    else:
+                        yield Input(value=current, id=f"field-{spec.key}")
         with Horizontal(id="actions"):
             yield Button("Save", variant="primary", id="save")
             yield Button("Revert", id="revert")
@@ -59,6 +65,35 @@ class AppThemeEditorScreen(Screen):
     def on_mount(self) -> None:
         for spec in CURATED_FIELDS:
             self._widgets[spec.key] = self.query_one(f"#field-{spec.key}")
+
+    def _raw_value(self, widget) -> str:
+        raw = widget.value if isinstance(widget, Select) else widget.value.strip()
+        return raw if isinstance(raw, str) else ""
+
+    def _validate_widget(self, spec: FieldSpec) -> None:
+        widget = self._widgets[spec.key]
+        raw = self._raw_value(widget)
+        valid = True
+        if raw:
+            try:
+                validate_value(spec, raw)
+            except ValueError:
+                valid = False
+        widget.set_class(not valid, "input-error")
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        key = event.input.id.removeprefix("field-") if event.input.id else ""
+        for spec in CURATED_FIELDS:
+            if spec.key == key:
+                self._validate_widget(spec)
+                break
+
+    def on_select_changed(self, event: Select.Changed) -> None:
+        key = event.select.id.removeprefix("field-") if event.select.id else ""
+        for spec in CURATED_FIELDS:
+            if spec.key == key:
+                self._validate_widget(spec)
+                break
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "save":
@@ -71,10 +106,7 @@ class AppThemeEditorScreen(Screen):
     def _collect(self) -> dict[str, str]:
         values: dict[str, str] = {}
         for spec in CURATED_FIELDS:
-            widget = self._widgets[spec.key]
-            raw = widget.value if isinstance(widget, Select) else widget.value.strip()
-            if not isinstance(raw, str):
-                raw = ""
+            raw = self._raw_value(self._widgets[spec.key])
             values[spec.key] = validate_value(spec, raw)
         return values
 
@@ -88,6 +120,7 @@ class AppThemeEditorScreen(Screen):
                 widget.value = current if current in options else Select.NULL
             else:
                 widget.value = current
+            widget.set_class(False, "input-error")
         self.notify("Reverted to the file's current values.")
 
     @work(exclusive=True)

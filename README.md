@@ -15,15 +15,18 @@ terminal colour scheme and your Termux app theme.
 
 ## Features
 
+- **Themes itself from your palette** — the TUI re-colours itself to match the
+  active terminal theme, and updates live as you highlight presets.
 - **Preset Themes** — browses the themes in `~/.termux/colors/` (the same
-  library used by `colors.sh`), shows a live swatch preview, and activates one
-  by pointing `~/.termux/colors.properties` at it and running
-  `termux-reload-settings`.
+  library used by `colors.sh`), with a filter box, a mock shell session
+  rendered in each theme, a swatch grid, and a colour strip. Activating a theme
+  points `~/.termux/colors.properties` at it and runs `termux-reload-settings`.
 - **Terminal Colors** — edits background, foreground, cursor and the 16 ANSI
-  colours, with a live preview. Save in place or `Save As...` a new theme.
+  colours with inline swatches, live validation and a live preview. Save in
+  place or `Save As...` a new theme.
 - **App Theme** — edits a safe subset of `~/.termux/termux.properties`
-  (`use-black-ui`, cursor style, margins, transcript rows, etc.) without
-  touching anything it does not manage.
+  (`use-black-ui`, cursor style, margins, transcript rows, etc.) in sectioned
+  groups, without touching anything it does not manage.
 - **Safe by default** — before overwriting an existing config it asks whether
   to write a timestamped backup to `~/.termux/backups/`.
 
@@ -44,7 +47,8 @@ termux-colors
 ```
 
 Navigation: `Tab`/`Shift+Tab` moves focus, `Enter` activates a button,
-`Esc` goes back, `q` quits from the main menu.
+`Esc` goes back, `q` quits from the main menu. In Preset Themes, focus the
+filter box and type to search the library.
 
 ## Relationship to `colors.sh`
 

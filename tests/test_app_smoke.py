@@ -64,3 +64,30 @@ def test_preset_picker_seeds_builtins_when_empty(tmp_path, monkeypatch):
             assert any("dracula" in theme.name.lower() for theme in app.screen.themes)
 
     asyncio.run(scenario())
+
+
+def test_preset_filter_narrows_the_list(tmp_path, monkeypatch):
+    from textual.widgets import Input
+
+    monkeypatch.setenv("TERMUX_HOME", str(tmp_path))
+    _seed(tmp_path)
+
+    async def scenario():
+        app = TermuxColorsApp()
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            app.push_screen("presets")
+            await pilot.pause()
+            screen = app.screen
+            assert len(screen.themes) == 2
+
+            screen.query_one("#theme-filter", Input).value = "nord"
+            await pilot.pause()
+            assert len(screen.themes) == 1
+            assert "nord" in screen.themes[0].name.lower()
+
+            screen.query_one("#theme-filter", Input).value = "zzz"
+            await pilot.pause()
+            assert screen.themes == []
+
+    asyncio.run(scenario())
