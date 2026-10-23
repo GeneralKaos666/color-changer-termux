@@ -9,6 +9,7 @@ use ratatui::layout::Rect;
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
 use crate::theme::Palette;
+use crate::ui::dialog::{Dialog, DialogResult};
 
 use self::main_menu::MainMenu;
 
@@ -22,7 +23,7 @@ pub enum ScreenKind {
 }
 
 /// What a screen asks [`crate::app::App`] to do after a key press.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum ScreenAction {
     /// Nothing to do.
     None,
@@ -36,6 +37,8 @@ pub enum ScreenAction {
     RefreshPalette(TerminalColors),
     /// Show `message` in the status line.
     Status(String),
+    /// Show a modal dialog over the current screen.
+    OpenDialog(Dialog),
 }
 
 /// The screens this application can show.
@@ -57,6 +60,13 @@ impl Screen {
     pub fn handle_key(&mut self, key: KeyEvent, paths: &Paths) -> ScreenAction {
         match self {
             Self::Main(screen) => screen.handle_key(key, paths),
+        }
+    }
+
+    /// Handle the result of a dialog this screen opened.
+    pub fn on_dialog(&mut self, result: DialogResult, paths: &Paths) -> ScreenAction {
+        match self {
+            Self::Main(screen) => screen.on_dialog(result, paths),
         }
     }
 

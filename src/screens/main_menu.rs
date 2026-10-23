@@ -11,6 +11,7 @@ use crate::library::{active_colors, active_theme_path};
 use crate::paths::Paths;
 use crate::screens::{ScreenAction, ScreenKind};
 use crate::theme::Palette;
+use crate::ui::dialog::DialogResult;
 use crate::ui::focus::{Move, list_move};
 use crate::ui::text;
 
@@ -76,6 +77,11 @@ impl MainMenu {
             },
             _ => ScreenAction::None,
         }
+    }
+
+    /// Handle the result of a dialog. The menu opens none.
+    pub fn on_dialog(&mut self, _result: DialogResult, _paths: &Paths) -> ScreenAction {
+        ScreenAction::None
     }
 
     /// Draw the banner, status line and menu box.

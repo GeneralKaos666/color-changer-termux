@@ -13,11 +13,13 @@ use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
 use crate::screens::{Screen, ScreenAction, ScreenKind};
 use crate::theme::Palette;
+use crate::ui::dialog::{Dialog, DialogResult};
 
 /// Everything the running application owns.
 pub struct App {
     paths: Paths,
     screens: Vec<Screen>,
+    dialog: Option<Dialog>,
     colors: TerminalColors,
     palette: Palette,
     status: Option<(String, Instant)>,
@@ -35,6 +37,7 @@ impl App {
             palette: Palette::from_colors(&colors),
             colors,
             screens: vec![main],
+            dialog: None,
             status: None,
             quit: false,
             paths,
@@ -47,10 +50,36 @@ impl App {
             self.quit = true;
             return;
         }
+        if let Some(dialog) = self.dialog.as_mut() {
+            if let Some(result) = dialog.handle_key(key) {
+                self.resolve_dialog(result);
+            }
+            return;
+        }
         let Some(screen) = self.screens.last_mut() else {
             return;
         };
         let action = screen.handle_key(key, &self.paths);
+        self.apply(action);
+    }
+
+    /// The dialog currently on screen, if any.
+    pub fn dialog(&self) -> Option<&Dialog> {
+        self.dialog.as_ref()
+    }
+
+    /// Show `dialog` over the current screen.
+    pub fn open_dialog(&mut self, dialog: Dialog) {
+        self.dialog = Some(dialog);
+    }
+
+    /// Close the current dialog and deliver `result` to the screen that asked.
+    pub fn resolve_dialog(&mut self, result: DialogResult) {
+        self.dialog = None;
+        let Some(screen) = self.screens.last_mut() else {
+            return;
+        };
+        let action = screen.on_dialog(result, &self.paths);
         self.apply(action);
     }
 
@@ -77,6 +106,11 @@ impl App {
                     ),
                 row,
             );
+        }
+        if let Some(dialog) = &self.dialog {
+            let palette = self.palette.clone();
+            let buffer = frame.buffer_mut();
+            dialog.render(area, buffer, &palette);
         }
     }
 
@@ -125,6 +159,7 @@ impl App {
                 self.palette = Palette::from_colors(&self.colors);
             }
             ScreenAction::Status(message) => self.set_status(&message),
+            ScreenAction::OpenDialog(dialog) => self.open_dialog(dialog),
         }
     }
 }
