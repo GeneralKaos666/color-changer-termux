@@ -1,6 +1,7 @@
 //! Screen stack entry points.
 
 pub mod main_menu;
+pub mod preset_picker;
 
 use crossterm::event::KeyEvent;
 use ratatui::Frame;
@@ -12,6 +13,7 @@ use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
 
 use self::main_menu::MainMenu;
+use self::preset_picker::PresetPicker;
 
 /// A screen that can be pushed onto the stack.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -45,6 +47,8 @@ pub enum ScreenAction {
 pub enum Screen {
     /// The landing menu.
     Main(MainMenu),
+    /// The theme library browser.
+    Presets(PresetPicker),
 }
 
 impl Screen {
@@ -52,7 +56,8 @@ impl Screen {
     pub fn new(kind: ScreenKind, paths: &Paths) -> Option<Self> {
         match kind {
             ScreenKind::Main => Some(Self::Main(MainMenu::new(paths))),
-            ScreenKind::Presets | ScreenKind::Terminal | ScreenKind::AppTheme => None,
+            ScreenKind::Presets => Some(Self::Presets(PresetPicker::new(paths))),
+            ScreenKind::Terminal | ScreenKind::AppTheme => None,
         }
     }
 
@@ -60,6 +65,7 @@ impl Screen {
     pub fn handle_key(&mut self, key: KeyEvent, paths: &Paths) -> ScreenAction {
         match self {
             Self::Main(screen) => screen.handle_key(key, paths),
+            Self::Presets(screen) => screen.handle_key(key, paths),
         }
     }
 
@@ -67,6 +73,7 @@ impl Screen {
     pub fn on_dialog(&mut self, result: DialogResult, paths: &Paths) -> ScreenAction {
         match self {
             Self::Main(screen) => screen.on_dialog(result, paths),
+            Self::Presets(_) => ScreenAction::None,
         }
     }
 
@@ -74,6 +81,7 @@ impl Screen {
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         match self {
             Self::Main(screen) => screen.render(frame, area, palette),
+            Self::Presets(screen) => screen.render(frame, area, palette),
         }
     }
 }
