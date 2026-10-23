@@ -145,8 +145,10 @@ impl App {
             ScreenAction::None => {}
             ScreenAction::Quit => self.quit = true,
             ScreenAction::Push(kind) => {
-                if let Some(screen) = Screen::new(kind, &self.paths) {
+                if let Some(mut screen) = Screen::new(kind, &self.paths) {
+                    let action = screen.opened(&self.paths);
                     self.screens.push(screen);
+                    self.apply(action);
                 }
             }
             ScreenAction::Pop => {

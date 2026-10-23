@@ -69,6 +69,14 @@ impl Screen {
         }
     }
 
+    /// The action a freshly pushed screen wants the app to apply.
+    pub fn opened(&mut self, paths: &Paths) -> ScreenAction {
+        match self {
+            Self::Main(_) => ScreenAction::None,
+            Self::Presets(screen) => screen.opened(paths),
+        }
+    }
+
     /// Handle the result of a dialog this screen opened.
     pub fn on_dialog(&mut self, result: DialogResult, paths: &Paths) -> ScreenAction {
         match self {

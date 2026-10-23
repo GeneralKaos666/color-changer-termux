@@ -51,3 +51,13 @@ pub fn picker_with(names: &[&str]) -> PresetPicker {
     }
     PresetPicker::new(&Paths::new(root))
 }
+
+/// The path of the theme the picker currently highlights.
+pub fn picker_theme_path(app: &mut App) -> std::path::PathBuf {
+    match app.current() {
+        termux_colors::screens::Screen::Presets(picker) => {
+            picker.selected().expect("a theme is selected").path.clone()
+        }
+        _ => panic!("the picker is not the current screen"),
+    }
+}
