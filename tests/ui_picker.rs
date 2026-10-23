@@ -1,0 +1,112 @@
+mod support;
+
+use support::{key, open_picker, picker_theme_path, picker_with, render_text};
+use termux_colors::app::App;
+use termux_colors::paths::Paths;
+use termux_colors::screens::preset_picker::load_themes;
+use termux_colors::ui::focus::{Move, list_move};
+
+#[test]
+fn empty_library_is_seeded_with_builtins() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = Paths::new(dir.path());
+    let themes = load_themes(&paths);
+    assert_eq!(themes.len(), 6);
+    assert!(
+        dir.path()
+            .join("colors/builtin/dracula.properties")
+            .is_file()
+    );
+}
+
+#[test]
+fn filter_is_case_insensitive_and_keeps_a_visible_selection() {
+    let mut picker = picker_with(&["Dracula", "Nord", "Solarized"]);
+    picker.apply_filter("dra");
+    assert_eq!(picker.visible.len(), 1);
+    assert_eq!(picker.selected().unwrap().name, "Dracula");
+    picker.apply_filter("");
+    assert_eq!(picker.visible.len(), 3);
+}
+
+#[test]
+fn movement_clamps_and_pages() {
+    let mut picker = picker_with(&["a", "b", "c", "d"]);
+    list_move(&mut picker.list, 4, Move::Down, 2);
+    assert_eq!(picker.list.selected(), Some(1));
+    for _ in 0..10 {
+        list_move(&mut picker.list, 4, Move::Down, 2);
+    }
+    assert_eq!(picker.list.selected(), Some(3));
+    list_move(&mut picker.list, 4, Move::Home, 2);
+    assert_eq!(picker.list.selected(), Some(0));
+    list_move(&mut picker.list, 4, Move::PageDown, 2);
+    assert_eq!(picker.list.selected(), Some(2));
+}
+
+#[test]
+fn picker_renders_labels_and_the_count() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = App::new(Paths::new(dir.path()));
+    open_picker(&mut app);
+    let text = render_text(&mut app, 100, 30);
+    assert!(text.contains("themes (6)"));
+    assert!(text.contains("dracula"));
+}
+
+#[test]
+fn escape_returns_to_the_menu() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = App::new(Paths::new(dir.path()));
+    open_picker(&mut app);
+    app.handle_key(key(crossterm::event::KeyCode::Esc));
+    assert!(render_text(&mut app, 100, 30).contains("Preset Themes"));
+}
+
+#[test]
+fn moving_the_selection_retints_the_ui() {
+    use ratatui::style::Color;
+    use termux_colors::paths::Paths;
+
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = App::new(Paths::new(dir.path()));
+    open_picker(&mut app);
+    let before = app.palette().clone();
+    app.handle_key(key(crossterm::event::KeyCode::Down));
+    assert_ne!(before, *app.palette());
+    assert!(app.palette().background != Color::Rgb(0, 0, 0));
+}
+
+#[test]
+fn enter_links_colors_properties_to_the_theme() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = Paths::new(dir.path());
+    let mut app = App::new(paths.clone());
+    open_picker(&mut app);
+    app.handle_key(key(crossterm::event::KeyCode::Enter));
+    let link = paths.colors_properties();
+    assert!(link.symlink_metadata().unwrap().file_type().is_symlink());
+    assert!(render_text(&mut app, 100, 30).contains("Saved"));
+}
+
+#[test]
+fn apply_failure_reports_and_keeps_the_old_link() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = Paths::new(dir.path());
+    let mut app = App::new(paths.clone());
+    open_picker(&mut app);
+    app.handle_key(key(crossterm::event::KeyCode::Enter));
+    let applied = std::fs::canonicalize(paths.colors_properties()).unwrap();
+
+    let theme = picker_theme_path(&mut app);
+    std::fs::remove_file(theme).unwrap();
+    app.handle_key(key(crossterm::event::KeyCode::Enter));
+
+    assert!(render_text(&mut app, 100, 30).contains("not found"));
+    // The theme file is gone, so the link is dangling and `canonicalize` would
+    // fail; read the link target itself to prove the old target survived.
+    assert_eq!(
+        std::fs::read_link(paths.colors_properties()).unwrap(),
+        applied
+    );
+}
