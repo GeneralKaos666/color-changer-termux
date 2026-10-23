@@ -8,6 +8,7 @@ use crossterm::event::KeyEvent;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 
+use crate::app::Command;
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
 use crate::theme::Palette;
@@ -41,6 +42,8 @@ pub enum ScreenAction {
     RefreshPalette(TerminalColors),
     /// Show `message` in the status line.
     Status(String),
+    /// Re-derive the UI palette from these colours and show `message`.
+    RefreshPaletteAndStatus(TerminalColors, String),
     /// Show a modal dialog over the current screen.
     OpenDialog(Dialog),
 }
@@ -84,11 +87,20 @@ impl Screen {
         }
     }
 
+    /// Run a save or revert command from the keyboard.
+    pub fn command(&mut self, command: Command, paths: &Paths) -> ScreenAction {
+        match self {
+            Self::Terminal(screen) => screen.command(command, paths),
+            Self::Main(_) | Self::Presets(_) => ScreenAction::None,
+        }
+    }
+
     /// Handle the result of a dialog this screen opened.
     pub fn on_dialog(&mut self, result: DialogResult, paths: &Paths) -> ScreenAction {
         match self {
             Self::Main(screen) => screen.on_dialog(result, paths),
-            Self::Presets(_) | Self::Terminal(_) => ScreenAction::None,
+            Self::Presets(_) => ScreenAction::None,
+            Self::Terminal(screen) => screen.on_dialog(result, paths),
         }
     }
 

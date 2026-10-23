@@ -15,6 +15,17 @@ use crate::screens::{Screen, ScreenAction, ScreenKind};
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
 
+/// A save or revert request, usually mapped from a `Ctrl` chord.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Command {
+    /// Save the current editor to its theme.
+    Save,
+    /// Save the current editor under a new name.
+    SaveAs,
+    /// Reload the editor from its theme.
+    Revert,
+}
+
 /// Everything the running application owns.
 pub struct App {
     paths: Paths,
@@ -56,10 +67,31 @@ impl App {
             }
             return;
         }
+        if key.modifiers.contains(KeyModifiers::CONTROL) {
+            let command = match key.code {
+                KeyCode::Char('s') => Some(Command::Save),
+                KeyCode::Char('a') => Some(Command::SaveAs),
+                KeyCode::Char('r') => Some(Command::Revert),
+                _ => None,
+            };
+            if let Some(command) = command {
+                self.command(command);
+                return;
+            }
+        }
         let Some(screen) = self.screens.last_mut() else {
             return;
         };
         let action = screen.handle_key(key, &self.paths);
+        self.apply(action);
+    }
+
+    /// Run a save or revert command against the current screen.
+    pub fn command(&mut self, command: Command) {
+        let action = match self.screens.last_mut() {
+            Some(screen) => screen.command(command, &self.paths),
+            None => ScreenAction::None,
+        };
         self.apply(action);
     }
 
@@ -168,6 +200,11 @@ impl App {
                 self.palette = Palette::from_colors(&self.colors);
             }
             ScreenAction::Status(message) => self.set_status(&message),
+            ScreenAction::RefreshPaletteAndStatus(colors, message) => {
+                self.colors = colors;
+                self.palette = Palette::from_colors(&self.colors);
+                self.set_status(&message);
+            }
             ScreenAction::OpenDialog(dialog) => self.open_dialog(dialog),
         }
     }

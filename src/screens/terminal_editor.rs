@@ -9,12 +9,15 @@ use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Paragraph};
 
-use crate::library::active_theme_path;
+use crate::app::Command;
+use crate::library::{active_theme_path, apply_theme, reload_termux};
 use crate::model::colors::{ColorField, PALETTE_SIZE, Rgb, TerminalColors};
 use crate::paths::Paths;
-use crate::persist::colors_io::read_colors;
+use crate::persist::backup::make_backup;
+use crate::persist::colors_io::{read_colors, write_colors};
 use crate::screens::ScreenAction;
 use crate::theme::Palette;
+use crate::ui::dialog::{Dialog, DialogResult};
 use crate::ui::form;
 use crate::ui::input::Field;
 use crate::ui::text;
@@ -39,6 +42,53 @@ const FORM_ROWS: usize = ANSI_ROW + 1 + PALETTE_SIZE;
 /// How many mock-session lines the preview shows.
 const PREVIEW_LINES: usize = 7;
 
+/// The step a dialog answer resumes, set just before the dialog opens.
+#[derive(Clone, Debug)]
+pub enum TerminalPending {
+    /// Back up, then write to the theme the editor was opened on.
+    WriteAfterBackup {
+        target: PathBuf,
+        colors: TerminalColors,
+    },
+    /// The Save As prompt is open for these colours.
+    NameForSaveAs { colors: TerminalColors },
+    /// The overwrite question is open for an existing target.
+    Overwrite {
+        target: PathBuf,
+        colors: TerminalColors,
+    },
+    /// Back up, then write a new theme file.
+    BackupThenWriteAs {
+        target: PathBuf,
+        colors: TerminalColors,
+    },
+}
+
+/// Turn a user-typed theme name into a safe file stem.
+///
+/// Every run of characters outside `[A-Za-z0-9._-]` becomes `-`, following
+/// dashes are trimmed, and an empty result becomes `custom` — the Python
+/// authority's rule.
+pub fn sanitize_name(name: &str) -> String {
+    let mut cleaned = String::new();
+    let mut in_run = false;
+    for character in name.trim().chars() {
+        if character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-') {
+            cleaned.push(character);
+            in_run = false;
+        } else if !in_run {
+            cleaned.push('-');
+            in_run = true;
+        }
+    }
+    let cleaned = cleaned.trim_end_matches('-');
+    if cleaned.is_empty() {
+        "custom".to_owned()
+    } else {
+        cleaned.to_owned()
+    }
+}
+
 /// The terminal colour editor's state.
 pub struct TerminalEditor {
     /// One hex field per [`ColorField`], in editor order.
@@ -53,6 +103,8 @@ pub struct TerminalEditor {
     pub target: Option<PathBuf>,
     /// The colours the fields were loaded from.
     pub base: TerminalColors,
+    /// The step a dialog answer resumes.
+    pending: Option<TerminalPending>,
     visible_rows: usize,
 }
 
@@ -74,6 +126,7 @@ impl TerminalEditor {
             scroll: 0,
             target,
             base,
+            pending: None,
             visible_rows: DEFAULT_VISIBLE_ROWS,
         }
     }
@@ -140,6 +193,171 @@ impl TerminalEditor {
         } else {
             Err(invalid)
         }
+    }
+
+    /// Run the save or revert flow `command` asks for.
+    pub fn command(&mut self, command: Command, paths: &Paths) -> ScreenAction {
+        match command {
+            Command::Save => self.start_save(paths),
+            Command::SaveAs => self.start_save_as(),
+            Command::Revert => self.start_revert(),
+        }
+    }
+
+    /// Save to the active theme, asking for a name or a backup when needed.
+    pub fn start_save(&mut self, paths: &Paths) -> ScreenAction {
+        let colors = match self.collect() {
+            Ok(colors) => colors,
+            Err(keys) => return invalid_keys(&keys),
+        };
+        let Some(target) = self.target.clone() else {
+            return self.start_save_as_with(colors);
+        };
+        let colors_properties = paths.colors_properties();
+        if colors_properties.exists() || colors_properties.is_symlink() {
+            self.pending = Some(TerminalPending::WriteAfterBackup { target, colors });
+            return backup_question();
+        }
+        self.write_and_apply(&target, colors, paths)
+    }
+
+    /// Ask for a name and save the collected colours under it.
+    pub fn start_save_as(&mut self) -> ScreenAction {
+        match self.collect() {
+            Ok(colors) => self.start_save_as_with(colors),
+            Err(keys) => invalid_keys(&keys),
+        }
+    }
+
+    /// Reload the fields from the active file, or from the defaults.
+    pub fn start_revert(&mut self) -> ScreenAction {
+        self.base = match &self.target {
+            Some(path) => read_colors(path).unwrap_or_default(),
+            None => TerminalColors::default(),
+        };
+        for (index, field) in self.fields.iter_mut().enumerate() {
+            field.set_value(&self.base.field(ColorField::ALL[index]).to_hex());
+        }
+        self.revalidate();
+        ScreenAction::RefreshPaletteAndStatus(
+            self.current_colors(),
+            "Reverted to the saved values.".to_owned(),
+        )
+    }
+
+    /// Advance the save flow once a dialog has answered.
+    pub fn on_dialog(&mut self, result: DialogResult, paths: &Paths) -> ScreenAction {
+        let Some(pending) = self.pending.take() else {
+            return ScreenAction::None;
+        };
+        match (pending, result) {
+            (
+                TerminalPending::WriteAfterBackup { target, colors }
+                | TerminalPending::BackupThenWriteAs { target, colors },
+                _,
+            ) => self.write_after_backup(&target, colors, paths),
+            (TerminalPending::NameForSaveAs { colors }, DialogResult::Text(Some(name))) => {
+                let file = format!("{}.properties", sanitize_name(&name));
+                let target = paths.colors_root().join("custom").join(&file);
+                if target.exists() {
+                    self.pending = Some(TerminalPending::Overwrite { target, colors });
+                    ScreenAction::OpenDialog(Dialog::confirm(
+                        &format!("{file} already exists. Overwrite?"),
+                        "Overwrite",
+                        "Cancel",
+                    ))
+                } else {
+                    self.begin_write_as(target, colors, paths)
+                }
+            }
+            (TerminalPending::NameForSaveAs { .. }, _) => {
+                ScreenAction::Status("Save As cancelled.".to_owned())
+            }
+            (TerminalPending::Overwrite { target, colors }, DialogResult::Confirmed(true)) => {
+                self.begin_write_as(target, colors, paths)
+            }
+            (TerminalPending::Overwrite { .. }, _) => {
+                ScreenAction::Status("Save As cancelled.".to_owned())
+            }
+        }
+    }
+
+    /// Ask for a name, then save `colors` under it.
+    fn start_save_as_with(&mut self, colors: TerminalColors) -> ScreenAction {
+        self.pending = Some(TerminalPending::NameForSaveAs { colors });
+        ScreenAction::OpenDialog(
+            Dialog::prompt("Name for the new theme:", "custom").with_placeholder("my-theme"),
+        )
+    }
+
+    /// Ask for the backup before writing a new theme file, or write directly.
+    fn begin_write_as(
+        &mut self,
+        target: PathBuf,
+        colors: TerminalColors,
+        paths: &Paths,
+    ) -> ScreenAction {
+        let colors_properties = paths.colors_properties();
+        if colors_properties.exists() || colors_properties.is_symlink() {
+            self.pending = Some(TerminalPending::BackupThenWriteAs { target, colors });
+            return backup_question();
+        }
+        self.write_and_apply(&target, colors, paths)
+    }
+
+    /// Back up the current config, then write (cancelling means skip).
+    fn write_after_backup(
+        &mut self,
+        target: &std::path::Path,
+        colors: TerminalColors,
+        paths: &Paths,
+    ) -> ScreenAction {
+        if let Err(error) = make_backup(&paths.colors_properties(), &paths.backups(), "colors") {
+            return ScreenAction::OpenDialog(Dialog::message(
+                &format!("Could not back up the current config: {error}"),
+                "Backup failed",
+            ));
+        }
+        self.write_and_apply(target, colors, paths)
+    }
+
+    /// Write `colors` to `target`, link it when needed, reload and report.
+    fn write_and_apply(
+        &mut self,
+        target: &std::path::Path,
+        colors: TerminalColors,
+        paths: &Paths,
+    ) -> ScreenAction {
+        if let Err(error) = write_colors(target, &colors, true) {
+            return ScreenAction::Status(format!("could not save {}: {error}", target.display()));
+        }
+        let colors_properties = paths.colors_properties();
+        let same = match (
+            std::fs::canonicalize(target),
+            std::fs::canonicalize(&colors_properties),
+        ) {
+            (Ok(target), Ok(active)) => target == active,
+            _ => false,
+        };
+        if !same {
+            if let Err(error) = apply_theme(target, &colors_properties) {
+                return ScreenAction::Status(format!(
+                    "could not activate {}: {error}",
+                    target.display()
+                ));
+            }
+        }
+        self.target = std::fs::canonicalize(target).ok();
+        self.base = colors;
+        let name = target
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| target.display().to_string());
+        let mut message = format!("Saved {name}.");
+        if !reload_termux() {
+            message.push_str(" Run termux-reload-settings to refresh.");
+        }
+        ScreenAction::Status(message)
     }
 
     /// The form row holding field `index`.
@@ -261,6 +479,23 @@ impl TerminalEditor {
     }
 }
 
+/// The message dialog naming every field that fails validation.
+fn invalid_keys(keys: &[String]) -> ScreenAction {
+    ScreenAction::OpenDialog(Dialog::message(
+        &format!("Invalid hex colour for: {}", keys.join(", ")),
+        "Invalid colour",
+    ))
+}
+
+/// The backup confirmation shared by both save flows.
+fn backup_question() -> ScreenAction {
+    ScreenAction::OpenDialog(Dialog::confirm(
+        "Back up the current config before saving?",
+        "Back up",
+        "Skip",
+    ))
+}
+
 /// Draw the action row: Save, Save As…, Revert and Back.
 fn render_actions(frame: &mut Frame, area: Rect, palette: &Palette) {
     let block = Block::bordered()
@@ -273,18 +508,18 @@ fn render_actions(frame: &mut Frame, area: Rect, palette: &Palette) {
     }
     let line = Line::from(vec![
         Span::styled(
-            " Save ",
+            " ctrl+s Save ",
             Style::default()
                 .fg(palette.background)
                 .bg(palette.primary)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw("  "),
-        Span::styled("Save As…", Style::default().fg(palette.foreground)),
+        Span::styled("ctrl+a Save As…", Style::default().fg(palette.foreground)),
         Span::raw("  "),
-        Span::styled("Revert", Style::default().fg(palette.foreground)),
+        Span::styled("ctrl+r Revert", Style::default().fg(palette.foreground)),
         Span::raw("  "),
-        Span::styled("Back", Style::default().fg(palette.muted)),
+        Span::styled("esc Back", Style::default().fg(palette.muted)),
     ]);
     frame.render_widget(Paragraph::new(line), inner);
 }

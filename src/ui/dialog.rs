@@ -78,6 +78,17 @@ impl Dialog {
         }
     }
 
+    /// Show `placeholder` in the prompt while its field is empty.
+    pub fn with_placeholder(mut self, placeholder: &str) -> Self {
+        if let Self::Prompt {
+            placeholder: slot, ..
+        } = &mut self
+        {
+            *slot = placeholder.to_owned();
+        }
+        self
+    }
+
     /// Handle a key press, returning a result once the dialog is finished.
     pub fn handle_key(&mut self, key: KeyEvent) -> Option<DialogResult> {
         match self {

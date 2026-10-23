@@ -7,11 +7,12 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
-use termux_colors::app::App;
+use termux_colors::app::{App, Command};
 use termux_colors::paths::Paths;
 use termux_colors::screens::Screen;
 use termux_colors::screens::preset_picker::PresetPicker;
 use termux_colors::screens::terminal_editor::TerminalEditor;
+use termux_colors::ui::dialog::DialogResult;
 
 /// Build a plain key press.
 pub fn key(code: KeyCode) -> KeyEvent {
@@ -92,12 +93,55 @@ pub fn editor_with(contents: &str) -> TerminalEditor {
 /// Focus the first field of the open editor and blank it, so that typed
 /// characters start from an empty value.
 pub fn focus_background_cleared(app: &mut App) {
+    let editor = editor_mut(app);
+    editor.focus = 0;
+    editor.fields[0].set_value("");
+    editor.revalidate();
+}
+
+/// Build an app on the terminal editor whose active theme has `background`.
+pub fn editor_with_active(background: &str) -> (App, Paths) {
+    editor_with_colors(Some(background))
+}
+
+/// Build an app on the terminal editor, optionally with an active theme that
+/// sets only `background`.
+pub fn editor_with_colors(background: Option<&str>) -> (App, Paths) {
+    let root = tempfile::tempdir().unwrap().keep();
+    let paths = Paths::new(root);
+    if let Some(background) = background {
+        std::fs::create_dir_all(paths.colors_root().join("dark")).unwrap();
+        let theme = paths.colors_root().join("dark/T.properties");
+        std::fs::write(&theme, format!("background={background}\n")).unwrap();
+        std::os::unix::fs::symlink(&theme, paths.colors_properties()).unwrap();
+    }
+    let mut app = App::new(paths.clone());
+    open_editor(&mut app);
+    (app, paths)
+}
+
+/// Set one editor field, adding the `#` that the brief's shorthand omits.
+pub fn set_field(app: &mut App, index: usize, value: &str) {
+    let value = if value.is_empty() || value.starts_with('#') {
+        value.to_owned()
+    } else {
+        format!("#{value}")
+    };
+    let editor = editor_mut(app);
+    editor.fields[index].set_value(&value);
+    editor.revalidate();
+}
+
+/// Run Save As and answer its name prompt with `name`.
+pub fn save_as(app: &mut App, name: &str) {
+    app.command(Command::SaveAs);
+    app.resolve_dialog(DialogResult::Text(Some(name.to_owned())));
+}
+
+/// The open terminal editor.
+pub fn editor_mut(app: &mut App) -> &mut TerminalEditor {
     match app.current_mut() {
-        Screen::Terminal(editor) => {
-            editor.focus = 0;
-            editor.fields[0].set_value("");
-            editor.revalidate();
-        }
+        Screen::Terminal(editor) => editor,
         _ => panic!("the editor is not the current screen"),
     }
 }
