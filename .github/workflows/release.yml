@@ -23,7 +23,7 @@ jobs:
           link-to-system-path: true
       - uses: Swatinem/rust-cache@v2
       - run: cargo install cargo-ndk --locked
-      - run: cargo ndk -t arm64-v8a -t armeabi-v7a -p 24 build --release
+      - run: cargo ndk -t arm64-v8a -t armeabi-v7a --platform 24 build --release
       - name: Strip and checksum
         env:
           NDK: ${{ steps.ndk.outputs.ndk-path }}
