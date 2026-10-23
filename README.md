@@ -94,6 +94,7 @@ termux-colors
 | `PageUp` / `PageDown` | jump ten items |
 | `Enter` | activate the focused button or item |
 | `Esc` | go back; quits from the main menu |
+| `q` | quit from the main menu |
 | `Ctrl+C` | quit from anywhere, including dialogs |
 | `Ctrl+S` | save (editors) |
 | `Ctrl+A` | save as a new theme (Terminal Colors) |
