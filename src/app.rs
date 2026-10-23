@@ -1,12 +1,12 @@
 //! The application: screen stack, palette and status line.
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Frame;
 use ratatui::layout::{Alignment, Rect};
 use ratatui::style::Style;
-use ratatui::widgets::Paragraph;
+use ratatui::widgets::{Block, Paragraph};
 
 use crate::library::active_colors;
 use crate::model::colors::TerminalColors;
@@ -14,6 +14,15 @@ use crate::paths::Paths;
 use crate::screens::{Screen, ScreenAction, ScreenKind};
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
+
+/// Smallest terminal width the screens are drawn at.
+pub const MIN_WIDTH: u16 = 40;
+
+/// Smallest terminal height the screens are drawn at.
+pub const MIN_HEIGHT: u16 = 10;
+
+/// How long a status message stays on screen.
+const STATUS_TTL: Duration = Duration::from_secs(4);
 
 /// A save or revert request, usually mapped from a `Ctrl` chord.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -34,6 +43,7 @@ pub struct App {
     colors: TerminalColors,
     palette: Palette,
     status: Option<(String, Instant)>,
+    too_small: bool,
     quit: bool,
 }
 
@@ -50,6 +60,7 @@ impl App {
             screens: vec![main],
             dialog: None,
             status: None,
+            too_small: false,
             quit: false,
             paths,
         }
@@ -59,6 +70,12 @@ impl App {
     pub fn handle_key(&mut self, key: KeyEvent) {
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
             self.quit = true;
+            return;
+        }
+        if self.too_small {
+            if matches!(key.code, KeyCode::Char('q') | KeyCode::Esc) {
+                self.quit = true;
+            }
             return;
         }
         if let Some(dialog) = self.dialog.as_mut() {
@@ -118,6 +135,11 @@ impl App {
     /// Draw the current screen and the status line.
     pub fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
+        self.too_small = area.width < MIN_WIDTH || area.height < MIN_HEIGHT;
+        if self.too_small {
+            self.render_too_small(frame, area);
+            return;
+        }
         if let Some(screen) = self.screens.last_mut() {
             screen.render(frame, area, &self.palette);
         }
@@ -146,8 +168,41 @@ impl App {
         }
     }
 
-    /// Advance time-driven state.
-    pub fn tick(&mut self, _now: Instant) {}
+    /// Advance time-driven state: expire a stale status message.
+    pub fn tick(&mut self, now: Instant) {
+        if let Some((_, shown)) = &self.status
+            && now.duration_since(*shown) >= STATUS_TTL
+        {
+            self.status = None;
+        }
+    }
+
+    /// Draw the guard shown when the terminal is below [`MIN_WIDTH`] by
+    /// [`MIN_HEIGHT`].
+    fn render_too_small(&self, frame: &mut Frame, area: Rect) {
+        frame.render_widget(
+            Block::default().style(
+                Style::default()
+                    .bg(self.palette.background)
+                    .fg(self.palette.foreground),
+            ),
+            area,
+        );
+        let row = Rect {
+            x: area.x,
+            y: area.y + area.height / 2,
+            width: area.width,
+            height: 1,
+        };
+        frame.render_widget(
+            Paragraph::new(format!(
+                "terminal too small ({MIN_WIDTH}×{MIN_HEIGHT} minimum)"
+            ))
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(self.palette.warning)),
+            row,
+        );
+    }
 
     /// The screen on top of the stack.
     pub fn current(&self) -> &Screen {
@@ -173,8 +228,8 @@ impl App {
         self.quit
     }
 
-    /// Show `message` in the status line.
-    fn set_status(&mut self, message: &str) {
+    /// Show `message` in the status line for [`STATUS_TTL`].
+    pub fn set_status(&mut self, message: &str) {
         self.status = Some((message.to_owned(), Instant::now()));
     }
 
