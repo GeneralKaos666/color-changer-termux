@@ -33,13 +33,11 @@ fn lines(text: &str) -> Vec<&str> {
 
 /// Returns the terminator to use for every output line.
 ///
-/// The style of the first line wins: a file written on Windows stays CRLF, and
-/// a file with no line ending at all gets LF.
+/// Matches the Python implementation: if the input contains a CRLF sequence
+/// anywhere, the whole file is written with CRLF, even when its first line
+/// used LF. A file with no CRLF gets LF.
 fn terminator(text: &str) -> &'static str {
-    match text.find('\n') {
-        Some(index) if index > 0 && text.as_bytes()[index - 1] == b'\r' => "\r\n",
-        _ => "\n",
-    }
+    if text.contains("\r\n") { "\r\n" } else { "\n" }
 }
 
 /// Reports whether `text` ends with a line terminator.
@@ -305,6 +303,26 @@ mod tests {
     #[test]
     fn unset_leaves_a_commented_key_alone() {
         assert_eq!(unset_value("# a = 1\n", "a"), "# a = 1\n");
+    }
+
+    #[test]
+    fn mixed_endings_follow_pythons_any_crlf_rule() {
+        // Python uses `"\r\n" in text`, so one CRLF anywhere makes the whole
+        // file CRLF on write, even when the first line was LF.
+        assert_eq!(set_value("a=1\nb=2\r\n", "a", "9"), "a=9\r\nb=2\r\n");
+        assert_eq!(unset_value("a=1\nb=2\r\n", "a"), "# a = 1\r\nb=2\r\n");
+    }
+
+    #[test]
+    fn parse_active_trims_surrounding_value_whitespace() {
+        assert_eq!(
+            parse_active("background=#ffffff  \n"),
+            vec![("background".to_string(), "#ffffff".to_string())]
+        );
+        assert_eq!(
+            parse_active("indented = \t value with spaces \t\n"),
+            vec![("indented".to_string(), "value with spaces".to_string())]
+        );
     }
 
     #[test]
