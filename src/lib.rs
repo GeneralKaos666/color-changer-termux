@@ -5,3 +5,4 @@ pub mod paths;
 pub mod persist;
 pub mod presets;
 pub mod theme;
+pub mod ui;
