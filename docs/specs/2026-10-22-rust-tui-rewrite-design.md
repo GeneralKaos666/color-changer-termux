@@ -155,7 +155,12 @@ Preservation guarantees, asserted by fixtures:
 | Commented key | `# key = value` is replaced in place, not duplicated |
 | Unknown keys | Untouched, same position |
 | Unset | Key is commented out as `# key = value`, never deleted |
-| Continuation lines | A following line ending in `\` is never re-parsed as a key |
+| Non-key lines | Array fragments, continuation lines and any line that is not `key=value` are never rewritten |
+
+The last row is the honest limit of line-by-line editing: a key that exists
+*inside* a multi-line `extra-keys` array and happens to look like `key=value`
+would be matched. Matching the Python behaviour is preferred to inventing a
+different rule here; the fixture tests pin the real one-line form Termux writes.
 
 **Canonicalisation (intentional change).** Managed keys — `background`,
 `foreground`, `cursor`, `color0`..`color15` — are re-rendered as lowercase
