@@ -2,6 +2,7 @@
 
 pub mod main_menu;
 pub mod preset_picker;
+pub mod terminal_editor;
 
 use crossterm::event::KeyEvent;
 use ratatui::Frame;
@@ -14,6 +15,7 @@ use crate::ui::dialog::{Dialog, DialogResult};
 
 use self::main_menu::MainMenu;
 use self::preset_picker::PresetPicker;
+use self::terminal_editor::TerminalEditor;
 
 /// A screen that can be pushed onto the stack.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -49,6 +51,8 @@ pub enum Screen {
     Main(MainMenu),
     /// The theme library browser.
     Presets(PresetPicker),
+    /// The terminal colour editor.
+    Terminal(Box<TerminalEditor>),
 }
 
 impl Screen {
@@ -57,7 +61,8 @@ impl Screen {
         match kind {
             ScreenKind::Main => Some(Self::Main(MainMenu::new(paths))),
             ScreenKind::Presets => Some(Self::Presets(PresetPicker::new(paths))),
-            ScreenKind::Terminal | ScreenKind::AppTheme => None,
+            ScreenKind::Terminal => Some(Self::Terminal(Box::new(TerminalEditor::new(paths)))),
+            ScreenKind::AppTheme => None,
         }
     }
 
@@ -66,6 +71,7 @@ impl Screen {
         match self {
             Self::Main(screen) => screen.handle_key(key, paths),
             Self::Presets(screen) => screen.handle_key(key, paths),
+            Self::Terminal(screen) => screen.handle_key(key),
         }
     }
 
@@ -74,6 +80,7 @@ impl Screen {
         match self {
             Self::Main(_) => ScreenAction::None,
             Self::Presets(screen) => screen.opened(paths),
+            Self::Terminal(screen) => screen.opened(),
         }
     }
 
@@ -81,7 +88,7 @@ impl Screen {
     pub fn on_dialog(&mut self, result: DialogResult, paths: &Paths) -> ScreenAction {
         match self {
             Self::Main(screen) => screen.on_dialog(result, paths),
-            Self::Presets(_) => ScreenAction::None,
+            Self::Presets(_) | Self::Terminal(_) => ScreenAction::None,
         }
     }
 
@@ -90,6 +97,7 @@ impl Screen {
         match self {
             Self::Main(screen) => screen.render(frame, area, palette),
             Self::Presets(screen) => screen.render(frame, area, palette),
+            Self::Terminal(screen) => screen.render(frame, area, palette),
         }
     }
 }

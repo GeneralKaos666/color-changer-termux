@@ -9,7 +9,9 @@ use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use termux_colors::app::App;
 use termux_colors::paths::Paths;
+use termux_colors::screens::Screen;
 use termux_colors::screens::preset_picker::PresetPicker;
+use termux_colors::screens::terminal_editor::TerminalEditor;
 
 /// Build a plain key press.
 pub fn key(code: KeyCode) -> KeyEvent {
@@ -59,5 +61,43 @@ pub fn picker_theme_path(app: &mut App) -> std::path::PathBuf {
             picker.selected().expect("a theme is selected").path.clone()
         }
         _ => panic!("the picker is not the current screen"),
+    }
+}
+
+/// Open the terminal colour editor from the main menu.
+pub fn open_editor(app: &mut App) {
+    app.handle_key(key(KeyCode::Down));
+    app.handle_key(key(KeyCode::Enter));
+}
+
+/// Build an app on the terminal editor over an empty temporary directory.
+pub fn editor_app() -> App {
+    let root = tempfile::tempdir().unwrap().keep();
+    let mut app = App::new(Paths::new(root));
+    open_editor(&mut app);
+    app
+}
+
+/// Build an editor whose active theme holds `contents`.
+pub fn editor_with(contents: &str) -> TerminalEditor {
+    let root = tempfile::tempdir().unwrap().keep();
+    let paths = Paths::new(root);
+    std::fs::create_dir_all(paths.colors_root().join("dark")).unwrap();
+    let theme = paths.colors_root().join("dark/T.properties");
+    std::fs::write(&theme, contents).unwrap();
+    std::os::unix::fs::symlink(&theme, paths.colors_properties()).unwrap();
+    TerminalEditor::new(&paths)
+}
+
+/// Focus the first field of the open editor and blank it, so that typed
+/// characters start from an empty value.
+pub fn focus_background_cleared(app: &mut App) {
+    match app.current_mut() {
+        Screen::Terminal(editor) => {
+            editor.focus = 0;
+            editor.fields[0].set_value("");
+            editor.revalidate();
+        }
+        _ => panic!("the editor is not the current screen"),
     }
 }

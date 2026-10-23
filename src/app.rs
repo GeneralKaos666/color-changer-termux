@@ -124,6 +124,13 @@ impl App {
             .expect("the screen stack is never empty")
     }
 
+    /// The screen on top of the stack, mutably.
+    pub fn current_mut(&mut self) -> &mut Screen {
+        self.screens
+            .last_mut()
+            .expect("the screen stack is never empty")
+    }
+
     /// The derived UI palette.
     pub fn palette(&self) -> &Palette {
         &self.palette
