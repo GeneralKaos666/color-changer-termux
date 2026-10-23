@@ -1,5 +1,6 @@
 //! Screen stack entry points.
 
+pub mod app_theme_editor;
 pub mod main_menu;
 pub mod preset_picker;
 pub mod terminal_editor;
@@ -14,6 +15,7 @@ use crate::paths::Paths;
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
 
+use self::app_theme_editor::AppThemeEditor;
 use self::main_menu::MainMenu;
 use self::preset_picker::PresetPicker;
 use self::terminal_editor::TerminalEditor;
@@ -56,6 +58,8 @@ pub enum Screen {
     Presets(PresetPicker),
     /// The terminal colour editor.
     Terminal(Box<TerminalEditor>),
+    /// The `termux.properties` editor.
+    AppTheme(Box<AppThemeEditor>),
 }
 
 impl Screen {
@@ -65,7 +69,7 @@ impl Screen {
             ScreenKind::Main => Some(Self::Main(MainMenu::new(paths))),
             ScreenKind::Presets => Some(Self::Presets(PresetPicker::new(paths))),
             ScreenKind::Terminal => Some(Self::Terminal(Box::new(TerminalEditor::new(paths)))),
-            ScreenKind::AppTheme => None,
+            ScreenKind::AppTheme => Some(Self::AppTheme(Box::new(AppThemeEditor::new(paths)))),
         }
     }
 
@@ -75,6 +79,7 @@ impl Screen {
             Self::Main(screen) => screen.handle_key(key, paths),
             Self::Presets(screen) => screen.handle_key(key, paths),
             Self::Terminal(screen) => screen.handle_key(key),
+            Self::AppTheme(screen) => screen.handle_key(key),
         }
     }
 
@@ -84,6 +89,7 @@ impl Screen {
             Self::Main(_) => ScreenAction::None,
             Self::Presets(screen) => screen.opened(paths),
             Self::Terminal(screen) => screen.opened(),
+            Self::AppTheme(_) => ScreenAction::None,
         }
     }
 
@@ -91,6 +97,7 @@ impl Screen {
     pub fn command(&mut self, command: Command, paths: &Paths) -> ScreenAction {
         match self {
             Self::Terminal(screen) => screen.command(command, paths),
+            Self::AppTheme(screen) => screen.command(command, paths),
             Self::Main(_) | Self::Presets(_) => ScreenAction::None,
         }
     }
@@ -101,6 +108,7 @@ impl Screen {
             Self::Main(screen) => screen.on_dialog(result, paths),
             Self::Presets(_) => ScreenAction::None,
             Self::Terminal(screen) => screen.on_dialog(result, paths),
+            Self::AppTheme(screen) => screen.on_dialog(result, paths),
         }
     }
 
@@ -110,6 +118,7 @@ impl Screen {
             Self::Main(screen) => screen.render(frame, area, palette),
             Self::Presets(screen) => screen.render(frame, area, palette),
             Self::Terminal(screen) => screen.render(frame, area, palette),
+            Self::AppTheme(screen) => screen.render(frame, area, palette),
         }
     }
 }

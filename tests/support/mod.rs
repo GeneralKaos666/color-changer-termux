@@ -8,8 +8,10 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use termux_colors::app::{App, Command};
+use termux_colors::model::app_theme::validate_value;
 use termux_colors::paths::Paths;
 use termux_colors::screens::Screen;
+use termux_colors::screens::app_theme_editor::AppThemeEditor;
 use termux_colors::screens::preset_picker::PresetPicker;
 use termux_colors::screens::terminal_editor::TerminalEditor;
 use termux_colors::ui::dialog::DialogResult;
@@ -136,6 +138,60 @@ pub fn set_field(app: &mut App, index: usize, value: &str) {
 pub fn save_as(app: &mut App, name: &str) {
     app.command(Command::SaveAs);
     app.resolve_dialog(DialogResult::Text(Some(name.to_owned())));
+}
+
+/// Open the app theme editor from the main menu.
+pub fn open_app_theme(app: &mut App) {
+    app.handle_key(key(KeyCode::Down));
+    app.handle_key(key(KeyCode::Down));
+    app.handle_key(key(KeyCode::Enter));
+}
+
+/// Build an app on the app theme editor over a temporary directory.
+pub fn app_theme_with(contents: &str) -> (App, Paths) {
+    let root = tempfile::tempdir().unwrap().keep();
+    let paths = Paths::new(root);
+    if !contents.is_empty() {
+        std::fs::write(paths.termux_properties(), contents).unwrap();
+    }
+    let mut app = App::new(paths.clone());
+    open_app_theme(&mut app);
+    (app, paths)
+}
+
+/// The open app theme editor.
+pub fn app_theme_mut(app: &mut App) -> &mut AppThemeEditor {
+    match app.current_mut() {
+        Screen::AppTheme(editor) => editor,
+        _ => panic!("the app theme editor is not the current screen"),
+    }
+}
+
+/// The index of the curated row editing `key`.
+pub fn row_index(app: &mut App, key: &str) -> usize {
+    app_theme_mut(app)
+        .rows
+        .iter()
+        .position(|row| row.spec.key == key)
+        .expect("a curated row")
+}
+
+/// Move the app theme editor's focus to `index`.
+pub fn focus_row(app: &mut App, index: usize) {
+    app_theme_mut(app).focus = index;
+}
+
+/// Set one curated row, updating its suggestion and validation state.
+pub fn set_row(app: &mut App, key: &str, value: &str) {
+    let editor = app_theme_mut(app);
+    let row = editor
+        .rows
+        .iter_mut()
+        .find(|row| row.spec.key == key)
+        .expect("a curated row");
+    row.value = (!value.is_empty()).then(|| value.to_owned());
+    row.field.set_value(value);
+    row.invalid = validate_value(row.spec, value).is_err();
 }
 
 /// The open terminal editor.
