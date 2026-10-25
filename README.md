@@ -39,6 +39,21 @@ terminal colour scheme and your Termux app theme.
 
 ## Install
 
+### APT (recommended)
+
+`termux-colors` is available from the [flutter-for-termux](https://github.com/GeneralKaos666/flutter-for-termux) apt repository.
+
+```sh
+pkg install -y gnupg
+mkdir -p "$PREFIX/etc/apt/keyrings"
+curl -fsSL https://GeneralKaos666.github.io/flutter-for-termux/key.gpg \
+  | gpg --dearmor > "$PREFIX/etc/apt/keyrings/flutter.gpg"
+echo "deb [signed-by=$PREFIX/etc/apt/keyrings/flutter.gpg] https://GeneralKaos666.github.io/flutter-for-termux termux main" \
+  > "$PREFIX/etc/apt/sources.list.d/flutter.list"
+pkg update && pkg install termux-colors
+termux-colors
+```
+
 ### Release binary
 
 Download the asset that matches your device and install it as
