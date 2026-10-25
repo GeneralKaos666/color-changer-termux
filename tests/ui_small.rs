@@ -2,8 +2,7 @@ mod support;
 
 use std::time::{Duration, Instant};
 
-use crossterm::event::KeyCode;
-use support::{key, render_text};
+use support::{ctrl, render_text};
 use termux_colors::app::App;
 use termux_colors::paths::Paths;
 
@@ -13,7 +12,7 @@ fn tiny_terminals_get_a_guard_not_a_panic() {
     let mut app = App::new(Paths::new(dir.path()));
     let text = render_text(&mut app, 20, 5);
     assert!(text.contains("too small"));
-    app.handle_key(key(KeyCode::Char('q')));
+    app.handle_key(ctrl('c'));
     assert!(app.should_quit());
 }
 

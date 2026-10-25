@@ -46,6 +46,8 @@ pub struct PresetPicker {
     pub list: ListState,
     /// Parsed colours per theme path.
     pub cache: HashMap<PathBuf, TerminalColors>,
+    /// Canonical path per theme path, memoized for active detection.
+    canon: HashMap<PathBuf, PathBuf>,
     /// The theme file `colors.properties` currently resolves to.
     pub active: Option<PathBuf>,
     paths: Paths,
@@ -80,6 +82,7 @@ impl PresetPicker {
             filter: Field::new(""),
             list,
             cache: HashMap::new(),
+            canon: HashMap::new(),
             paths: paths.clone(),
             focus: Focus::List,
         }
@@ -219,6 +222,7 @@ impl PresetPicker {
         let previous = self.selected().map(|theme| theme.path.clone());
         self.all = load_themes(&self.paths);
         self.cache.clear();
+        self.canon.clear();
         let needle = self.filter.value().to_owned();
         self.visible = (0..self.all.len()).collect();
         self.apply_filter(&needle);
@@ -254,7 +258,20 @@ impl PresetPicker {
     fn is_active(&self, theme: &ThemeRef) -> bool {
         self.active
             .as_ref()
-            .is_some_and(|active| std::fs::canonicalize(&theme.path).ok().as_ref() == Some(active))
+            .is_some_and(|active| self.canon.get(&theme.path) == Some(active))
+    }
+
+    /// Memoize the canonical path of every visible theme so [`Self::is_active`]
+    /// does not touch the filesystem on every frame.
+    fn memoize_canonical(&mut self) {
+        for &index in &self.visible {
+            let Some(theme) = self.all.get(index) else {
+                continue;
+            };
+            self.canon.entry(theme.path.clone()).or_insert_with(|| {
+                std::fs::canonicalize(&theme.path).unwrap_or_else(|_| theme.path.clone())
+            });
+        }
     }
 
     /// Draw the filter, the theme list and the preview.
@@ -267,6 +284,7 @@ impl PresetPicker {
             ),
             area,
         );
+        self.memoize_canonical();
         let [list_area, preview_area] =
             Layout::horizontal([Constraint::Percentage(42), Constraint::Percentage(58)])
                 .areas(area);

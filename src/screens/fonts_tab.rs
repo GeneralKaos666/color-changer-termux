@@ -22,6 +22,7 @@ pub struct FontsTab {
     show_filter: bool,
     slot: usize,
     session: apply::SessionState,
+    prompt: Vec<String>,
 }
 
 impl FontsTab {
@@ -42,6 +43,7 @@ impl FontsTab {
         if !entries.is_empty() {
             state.select(Some(0));
         }
+        let prompt = prompt::capture_prompt_lines();
         Self {
             entries,
             state,
@@ -49,6 +51,7 @@ impl FontsTab {
             show_filter: false,
             slot: 0,
             session: apply::new_session_state(paths),
+            prompt,
         }
     }
 
@@ -148,7 +151,6 @@ impl FontsTab {
     }
 
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
-        let prompt_lines = prompt::capture_prompt_lines();
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -159,7 +161,8 @@ impl FontsTab {
             ])
             .split(area);
         // preview area
-        let preview: Vec<ratatui::text::Line> = prompt_lines
+        let preview: Vec<ratatui::text::Line> = self
+            .prompt
             .iter()
             .map(|l| ratatui::text::Line::from(l.as_str()))
             .collect();

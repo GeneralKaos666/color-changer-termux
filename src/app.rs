@@ -35,13 +35,6 @@ pub enum Command {
     Revert,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Tab {
-    Colors,
-    Fonts,
-    AppTheme,
-}
-
 /// Everything the running application owns.
 pub struct App {
     paths: Paths,
@@ -52,7 +45,6 @@ pub struct App {
     status: Option<(String, Instant)>,
     too_small: bool,
     quit: bool,
-    pub current_tab: Tab,
 }
 
 impl App {
@@ -71,23 +63,19 @@ impl App {
             too_small: false,
             quit: false,
             paths,
-            current_tab: Tab::Colors,
         }
     }
 
     /// Handle a key press from the event loop.
     pub fn handle_key(&mut self, key: KeyEvent) {
-        if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
-            // Restore preview fonts on quit
-            self.quit = true;
-            return;
-        }
-        if key.code == KeyCode::Char('q') && !key.modifiers.contains(KeyModifiers::CONTROL) {
+        if key.modifiers.contains(KeyModifiers::CONTROL)
+            && matches!(key.code, KeyCode::Char('c') | KeyCode::Char('q'))
+        {
             self.quit = true;
             return;
         }
         if self.too_small {
-            if matches!(key.code, KeyCode::Char('q') | KeyCode::Esc) {
+            if key.code == KeyCode::Esc {
                 self.quit = true;
             }
             return;
@@ -96,20 +84,6 @@ impl App {
             if let Some(result) = dialog.handle_key(key) {
                 self.resolve_dialog(result);
             }
-            return;
-        }
-        // Tab switching (kept for compatibility, no longer used by menu flow)
-        if key.code == KeyCode::Tab {
-            // no-op in drill-down menu mode
-            return;
-        }
-        if key.code == KeyCode::BackTab {
-            return;
-        }
-        if key.code == KeyCode::Left {
-            return;
-        }
-        if key.code == KeyCode::Right {
             return;
         }
         if key.modifiers.contains(KeyModifiers::CONTROL) {
@@ -129,11 +103,6 @@ impl App {
         };
         let action = screen.handle_key(key, &self.paths);
         self.apply(action);
-    }
-
-    #[allow(dead_code)]
-    fn switch_tab(&mut self, _dir: i32) {
-        // Drill-down menu mode; no-op
     }
 
     /// Run a save or revert command against the current screen.
@@ -165,7 +134,7 @@ impl App {
         self.apply(action);
     }
 
-    /// Draw the current screen and the status line.
+    /// Draw the current screen and, when set, the status line.
     pub fn render(&mut self, frame: &mut Frame) {
         let area = frame.area();
         self.too_small = area.width < MIN_WIDTH || area.height < MIN_HEIGHT;
@@ -173,53 +142,9 @@ impl App {
             self.render_too_small(frame, area);
             return;
         }
-        // Draw tab bar
-        let tab_area = Rect {
-            x: area.x,
-            y: area.y,
-            width: area.width,
-            height: 1,
-        };
-        let tab_text = match self.current_tab {
-            Tab::Colors => " Colors ─┬ Fonts ─┬ App Theme ",
-            Tab::Fonts => " Colors ┬ Fonts ─┬ App Theme ",
-            Tab::AppTheme => " Colors ┬ Fonts ─┬ App Theme ─",
-        };
-        frame.render_widget(
-            Paragraph::new(tab_text).style(Style::default().fg(self.palette.primary)),
-            tab_area,
-        );
-        let content_area = Rect {
-            x: area.x,
-            y: area.y + 1,
-            width: area.width,
-            height: area.height.saturating_sub(2),
-        };
         if let Some(screen) = self.screens.last_mut() {
-            screen.render(frame, content_area, &self.palette);
+            screen.render(frame, area, &self.palette);
         }
-        // Footer
-        let footer_area = Rect {
-            x: area.x,
-            y: area.y + area.height.saturating_sub(1),
-            width: area.width,
-            height: 1,
-        };
-        let footer = match self.current_tab {
-            Tab::Colors => "Tab/←→ switch | ↑↓ navigate | Enter select | q quit",
-            Tab::Fonts => {
-                "Tab/←→ switch | s slot | Space/p preview | Enter apply | Esc restore | i import | d download | q quit"
-            }
-            Tab::AppTheme => "Tab/←→ switch | ↑↓ navigate | Ctrl+S save | Ctrl+R revert | q quit",
-        };
-        frame.render_widget(
-            Paragraph::new(footer).style(
-                Style::default()
-                    .bg(self.palette.panel)
-                    .fg(self.palette.muted),
-            ),
-            footer_area,
-        );
         if let Some((message, _)) = &self.status {
             let row = Rect {
                 x: area.x,
@@ -233,7 +158,7 @@ impl App {
                     .style(
                         Style::default()
                             .bg(self.palette.panel)
-                            .fg(self.palette.muted),
+                            .fg(self.palette.foreground),
                     ),
                 row,
             );
@@ -325,6 +250,11 @@ impl App {
             ScreenAction::Pop => {
                 if self.screens.len() > 1 {
                     self.screens.pop();
+                }
+                // Refresh the revealed screen (e.g. the menu's active-theme
+                // name after a change was applied elsewhere).
+                if let Some(screen) = self.screens.last_mut() {
+                    screen.refresh(&self.paths);
                 }
             }
             ScreenAction::RefreshPalette(colors) => {

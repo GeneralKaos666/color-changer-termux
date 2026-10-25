@@ -1,7 +1,7 @@
 mod support;
 
 use crossterm::event::KeyCode;
-use support::{key, render_text};
+use support::{ctrl, key, render_text};
 use termux_colors::app::App;
 use termux_colors::paths::Paths;
 
@@ -16,18 +16,18 @@ fn menu_renders_its_four_items_and_active_theme() {
 }
 
 #[test]
-fn arrows_move_the_selection_and_quit_item_exits() {
+fn ctrl_c_quits_from_the_menu() {
     let dir = tempfile::tempdir().unwrap();
     let mut app = App::new(Paths::new(dir.path()));
-    app.handle_key(key(KeyCode::Char('q')));
+    app.handle_key(ctrl('c'));
     assert!(app.should_quit());
 }
 
 #[test]
-fn tab_cycles_focus_and_q_quits() {
+fn tab_navigates_and_ctrl_c_quits() {
     let dir = tempfile::tempdir().unwrap();
     let mut app = App::new(Paths::new(dir.path()));
     app.handle_key(key(KeyCode::Tab));
-    app.handle_key(key(KeyCode::Char('q')));
+    app.handle_key(ctrl('c'));
     assert!(app.should_quit());
 }

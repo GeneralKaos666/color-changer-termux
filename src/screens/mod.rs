@@ -101,6 +101,14 @@ impl Screen {
         }
     }
 
+    /// Re-read externally mutable data (for example the active theme) after
+    /// the screen is revealed again.
+    pub fn refresh(&mut self, paths: &Paths) {
+        if let Self::Main(screen) = self {
+            screen.refresh(paths);
+        }
+    }
+
     /// The action a freshly pushed screen wants the app to apply.
     pub fn opened(&mut self, paths: &Paths) -> ScreenAction {
         match self {

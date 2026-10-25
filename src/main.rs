@@ -1,6 +1,7 @@
 //! The full-screen event loop.
 
 use std::io;
+use std::time::Instant;
 
 use crossterm::event::{self, Event, KeyEventKind};
 use ratatui::Terminal;
@@ -18,7 +19,7 @@ fn main() -> io::Result<()> {
         termux_colors::ui::ascii::set_ascii(true);
     }
     if args.version {
-        println!("termux-colors 0.2.0");
+        println!("termux-colors {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
     let paths = Paths::from_env();
@@ -62,6 +63,7 @@ fn main() -> io::Result<()> {
     let mut app = App::new(paths);
 
     loop {
+        app.tick(Instant::now());
         terminal.draw(|frame| app.render(frame))?;
         match event::read()? {
             Event::Key(key) if key.kind != KeyEventKind::Release => app.handle_key(key),

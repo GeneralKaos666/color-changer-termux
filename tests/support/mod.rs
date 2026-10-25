@@ -21,6 +21,11 @@ pub fn key(code: KeyCode) -> KeyEvent {
     KeyEvent::new(code, KeyModifiers::NONE)
 }
 
+/// Build a Ctrl+<char> key press.
+pub fn ctrl(code: char) -> KeyEvent {
+    KeyEvent::new(KeyCode::Char(code), KeyModifiers::CONTROL)
+}
+
 /// Draw `app` into a `width` x `height` test buffer and return its text.
 pub fn render_text(app: &mut App, width: u16, height: u16) -> String {
     let backend = TestBackend::new(width, height);

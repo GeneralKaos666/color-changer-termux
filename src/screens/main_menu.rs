@@ -8,6 +8,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
 
 use crate::library::{active_colors, active_theme_path};
+use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
 use crate::screens::{ScreenAction, ScreenKind};
 use crate::theme::Palette;
@@ -31,7 +32,10 @@ const MENU_HEIGHT: u16 = 7;
 pub struct MainMenu {
     /// Which menu entry is highlighted.
     pub list: ListState,
-    paths: Paths,
+    /// The active theme's colours, captured once and refreshed on return.
+    colors: TerminalColors,
+    /// The active theme's library-relative name.
+    active_label: String,
 }
 
 impl MainMenu {
@@ -39,15 +43,22 @@ impl MainMenu {
     pub fn new(paths: &Paths) -> Self {
         Self {
             list: ListState::default().with_selected(Some(0)),
-            paths: paths.clone(),
+            colors: active_colors(paths),
+            active_label: active_name(paths),
         }
+    }
+
+    /// Re-read the active theme after a change made on another screen.
+    pub fn refresh(&mut self, paths: &Paths) {
+        self.colors = active_colors(paths);
+        self.active_label = active_name(paths);
     }
 
     /// Handle a key press, returning the action the app should apply.
     pub fn handle_key(&mut self, key: KeyEvent, _paths: &Paths) -> ScreenAction {
         let len = ITEMS.len();
         match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => ScreenAction::Quit,
+            KeyCode::Esc => ScreenAction::Quit,
             KeyCode::Up | KeyCode::Char('k') | KeyCode::BackTab => {
                 list_move(&mut self.list, len, Move::Up, len);
                 ScreenAction::None
@@ -87,7 +98,6 @@ impl MainMenu {
 
     /// Draw the banner, status line and menu box.
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
-        let colors = active_colors(&self.paths);
         frame.render_widget(
             Block::default().style(
                 Style::default()
@@ -98,26 +108,31 @@ impl MainMenu {
         );
 
         let (stacked, compact) = banner_mode(area.width, area.height);
-        let mut header = text::banner(&colors, area.width, stacked, compact);
+        let mut header = text::banner(&self.colors, area.width, stacked, compact);
         header.push(
             Line::from("change terminal & app colours, live")
                 .style(Style::default().fg(palette.muted))
                 .alignment(Alignment::Center),
         );
         header.push(Line::from(""));
-        header.push(text::palette_strip(&colors).alignment(Alignment::Center));
+        header.push(text::palette_strip(&self.colors).alignment(Alignment::Center));
         header.push(Line::from(""));
         header.push(
             Line::from(vec![
                 Span::styled("active theme  ", Style::default().fg(palette.muted)),
                 Span::styled(
-                    active_name(&self.paths),
+                    self.active_label.clone(),
                     Style::default()
                         .fg(palette.primary)
                         .add_modifier(Modifier::BOLD),
                 ),
             ])
             .alignment(Alignment::Center),
+        );
+        header.push(
+            Line::from("↑↓ move · Enter open · Esc quit · Ctrl+C quit")
+                .style(Style::default().fg(palette.muted))
+                .alignment(Alignment::Center),
         );
 
         let header_height = (header.len() as u16).min(area.height.saturating_sub(MENU_HEIGHT));
