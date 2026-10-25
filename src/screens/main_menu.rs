@@ -16,15 +16,16 @@ use crate::ui::focus::{Move, list_move};
 use crate::ui::text;
 
 /// The menu entries, in display order.
-const ITEMS: [(&str, ScreenKind); 4] = [
+const ITEMS: [(&str, ScreenKind); 5] = [
     ("Preset Themes", ScreenKind::Presets),
     ("Terminal Colors", ScreenKind::Terminal),
     ("App Theme", ScreenKind::AppTheme),
+    ("Fonts", ScreenKind::FontsTab),
     ("Quit", ScreenKind::Main),
 ];
 
-/// Rows the bordered menu box needs: four items plus its two borders.
-const MENU_HEIGHT: u16 = 6;
+/// Rows the bordered menu box needs: items plus its two borders.
+const MENU_HEIGHT: u16 = 7;
 
 /// The landing menu.
 pub struct MainMenu {
@@ -72,7 +73,7 @@ impl MainMenu {
                 ScreenAction::None
             }
             KeyCode::Enter => match self.list.selected().unwrap_or(0) {
-                3 => ScreenAction::Quit,
+                4 => ScreenAction::Quit,
                 index => ScreenAction::Push(ITEMS[index].1),
             },
             _ => ScreenAction::None,

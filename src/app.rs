@@ -56,16 +56,16 @@ pub struct App {
 }
 
 impl App {
-    /// Build the app on the Colors tab.
+    /// Build the app on the main menu.
     pub fn new(paths: Paths) -> Self {
         let colors = active_colors(&paths);
-        let Some(colors_tab) = Screen::new(ScreenKind::ColorsTab, &paths) else {
-            unreachable!("the colors tab always exists");
+        let Some(main) = Screen::new(ScreenKind::Main, &paths) else {
+            unreachable!("the main menu always exists");
         };
         Self {
             palette: Palette::from_colors(&colors),
             colors,
-            screens: vec![colors_tab],
+            screens: vec![main],
             dialog: None,
             status: None,
             too_small: false,
@@ -98,21 +98,18 @@ impl App {
             }
             return;
         }
-        // Tab switching
+        // Tab switching (kept for compatibility, no longer used by menu flow)
         if key.code == KeyCode::Tab {
-            self.switch_tab(1);
+            // no-op in drill-down menu mode
             return;
         }
         if key.code == KeyCode::BackTab {
-            self.switch_tab(-1);
             return;
         }
         if key.code == KeyCode::Left {
-            self.switch_tab(-1);
             return;
         }
         if key.code == KeyCode::Right {
-            self.switch_tab(1);
             return;
         }
         if key.modifiers.contains(KeyModifiers::CONTROL) {
@@ -134,37 +131,8 @@ impl App {
         self.apply(action);
     }
 
-    fn switch_tab(&mut self, dir: i32) {
-        let new_tab = match (&self.current_tab, dir) {
-            (Tab::Colors, 1) => Tab::Fonts,
-            (Tab::Colors, -1) => Tab::AppTheme,
-            (Tab::Fonts, 1) => Tab::AppTheme,
-            (Tab::Fonts, -1) => Tab::Colors,
-            (Tab::AppTheme, 1) => Tab::Colors,
-            (Tab::AppTheme, -1) => Tab::Fonts,
-            _ => self.current_tab.clone(),
-        };
-        self.current_tab = new_tab.clone();
-        match new_tab {
-            Tab::Colors => {
-                if let Some(screen) = Screen::new(ScreenKind::ColorsTab, &self.paths) {
-                    self.screens.clear();
-                    self.screens.push(screen);
-                }
-            }
-            Tab::Fonts => {
-                if let Some(screen) = Screen::new(ScreenKind::FontsTab, &self.paths) {
-                    self.screens.clear();
-                    self.screens.push(screen);
-                }
-            }
-            Tab::AppTheme => {
-                if let Some(screen) = Screen::new(ScreenKind::AppThemeTab, &self.paths) {
-                    self.screens.clear();
-                    self.screens.push(screen);
-                }
-            }
-        }
+    fn switch_tab(&mut self, _dir: i32) {
+        // Drill-down menu mode; no-op
     }
 
     /// Run a save or revert command against the current screen.

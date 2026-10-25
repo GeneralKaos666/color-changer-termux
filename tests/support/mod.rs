@@ -142,9 +142,10 @@ pub fn save_as(app: &mut App, name: &str) {
 
 /// Open the app theme editor from the main menu.
 pub fn open_app_theme(app: &mut App) {
-    // Switch to App Theme tab (from Colors: Tab gives Fonts, Tab gives AppTheme)
-    app.handle_key(key(KeyCode::Tab));
-    app.handle_key(key(KeyCode::Tab));
+    // Drill-down: go down to App Theme (index 2) and press Enter
+    app.handle_key(key(KeyCode::Down)); // Preset -> Terminal
+    app.handle_key(key(KeyCode::Down)); // Terminal -> App Theme
+    app.handle_key(key(KeyCode::Enter));
 }
 
 /// Build an app on the app theme editor over a temporary directory.
