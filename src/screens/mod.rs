@@ -71,7 +71,7 @@ pub enum Screen {
     AppTheme(Box<AppThemeEditor>),
     ColorsTab(ColorsTab),
     FontsTab(FontsTab),
-    AppThemeTab(AppThemeTab),
+    AppThemeTab(Box<AppThemeTab>),
 }
 
 impl Screen {
@@ -84,7 +84,7 @@ impl Screen {
             ScreenKind::AppTheme => Some(Self::AppTheme(Box::new(AppThemeEditor::new(paths)))),
             ScreenKind::ColorsTab => Some(Self::ColorsTab(ColorsTab::new(paths))),
             ScreenKind::FontsTab => Some(Self::FontsTab(FontsTab::new(paths))),
-            ScreenKind::AppThemeTab => Some(Self::AppThemeTab(AppThemeTab::new(paths))),
+            ScreenKind::AppThemeTab => Some(Self::AppThemeTab(Box::new(AppThemeTab::new(paths)))),
         }
     }
 

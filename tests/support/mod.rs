@@ -12,7 +12,6 @@ use termux_colors::model::app_theme::validate_value;
 use termux_colors::paths::Paths;
 use termux_colors::screens::Screen;
 use termux_colors::screens::app_theme_editor::AppThemeEditor;
-use termux_colors::screens::app_theme_tab::AppThemeTab;
 use termux_colors::screens::preset_picker::PresetPicker;
 use termux_colors::screens::terminal_editor::TerminalEditor;
 use termux_colors::ui::dialog::DialogResult;

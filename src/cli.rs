@@ -36,9 +36,9 @@ impl Args {
                 _ => {}
             }
         }
-        if env::var("TERMUX_COLORS_ASCII").is_ok_and(|v| v != "0") {
-            args.ascii = true;
-        } else if env::var("FONT_CHANGER_ASCII").is_ok_and(|v| v != "0") {
+        if env::var("TERMUX_COLORS_ASCII").is_ok_and(|v| v != "0")
+            || env::var("FONT_CHANGER_ASCII").is_ok_and(|v| v != "0")
+        {
             args.ascii = true;
         }
         args

@@ -1,7 +1,6 @@
 mod support;
 
-use crossterm::event::KeyCode;
-use support::{app_theme_with, focus_row, key, open_app_theme, render_text, row_index, set_row};
+use support::{app_theme_with, open_app_theme, render_text, set_row};
 use termux_colors::app::{App, Command};
 use termux_colors::paths::Paths;
 use termux_colors::ui::dialog::DialogResult;
