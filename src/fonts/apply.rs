@@ -22,7 +22,8 @@ pub struct SessionState {
     pub preview: Option<PreviewRef>,
 }
 
-pub const MANUAL_RESTART_HINT: &str = "termux-reload-settings not available; restart the Termux app to apply the font";
+pub const MANUAL_RESTART_HINT: &str =
+    "termux-reload-settings not available; restart the Termux app to apply the font";
 
 static mut LAST_RELOAD_OK: Option<bool> = None;
 
@@ -68,14 +69,22 @@ pub fn ensure_backup_once(paths: &Paths, target: &Path) -> io::Result<Option<Pat
     let _ = meta;
     let dest_dir = paths.backups_dir();
     fs::create_dir_all(&dest_dir)?;
-    let base = target.file_name().unwrap_or_default().to_string_lossy().to_string();
+    let base = target
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
     let ext = Path::new(&base)
         .extension()
         .and_then(|e| e.to_str())
         .map(|e| format!(".{e}"))
         .unwrap_or_default();
-    let stem = if ext.is_empty() { base.clone() } else { base[..base.len() - ext.len()].to_string() };
-    
+    let stem = if ext.is_empty() {
+        base.clone()
+    } else {
+        base[..base.len() - ext.len()].to_string()
+    };
+
     if let Ok(entries) = fs::read_dir(&dest_dir) {
         for entry in entries.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
@@ -84,7 +93,7 @@ pub fn ensure_backup_once(paths: &Paths, target: &Path) -> io::Result<Option<Pat
             }
         }
     }
-    
+
     let timestamp = format_timestamp();
     let dest = dest_dir.join(format!("{stem}-{timestamp}{ext}"));
     if dest.exists() {
@@ -96,7 +105,9 @@ pub fn ensure_backup_once(paths: &Paths, target: &Path) -> io::Result<Option<Pat
 
 fn format_timestamp() -> String {
     // Use system time
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
     let secs = now.as_secs();
     // Simple formatting
     let t = secs;
@@ -106,7 +117,15 @@ fn format_timestamp() -> String {
     let min = (secs_in_day % 3600) / 60;
     let sec = secs_in_day % 60;
     // Approximate date (rough)
-    format!("{:04}-{:02}-{:02}-{:02}{:02}{:02}", 1970 + days / 365, (days % 365) / 30 + 1, (days % 30) + 1, hour, min, sec)
+    format!(
+        "{:04}-{:02}-{:02}-{:02}{:02}{:02}",
+        1970 + days / 365,
+        (days % 365) / 30 + 1,
+        (days % 30) + 1,
+        hour,
+        min,
+        sec
+    )
 }
 
 fn copy_preserving_mode(src: &Path, dst: &Path) -> io::Result<()> {
@@ -130,7 +149,9 @@ fn copy_preserving_mode(src: &Path, dst: &Path) -> io::Result<()> {
 fn checked_target(paths: &Paths, src: &Path, slot: &str) -> crate::error::Result<PathBuf> {
     let (ok, reason) = validate::is_valid_font(src);
     if !ok {
-        return Err(crate::error::Error::Invalid(format!("invalid font: {reason}")));
+        return Err(crate::error::Error::Invalid(format!(
+            "invalid font: {reason}"
+        )));
     }
     paths.font_slot_path(slot)
 }
@@ -146,7 +167,12 @@ pub fn install_font(paths: &Paths, src: &Path, slot: &str) -> crate::error::Resu
     Ok(target)
 }
 
-pub fn preview_font(paths: &Paths, src: &Path, slot: &str, st: &mut SessionState) -> crate::error::Result<PathBuf> {
+pub fn preview_font(
+    paths: &Paths,
+    src: &Path,
+    slot: &str,
+    st: &mut SessionState,
+) -> crate::error::Result<PathBuf> {
     let target = checked_target(paths, src, slot)?;
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent)?;
@@ -155,7 +181,10 @@ pub fn preview_font(paths: &Paths, src: &Path, slot: &str, st: &mut SessionState
     st.backed_up.insert(slot.to_string(), true);
     copy_preserving_mode(src, &target)?;
     st.dirty = true;
-    st.preview = Some(PreviewRef { src: src.to_path_buf(), slot: slot.to_string() });
+    st.preview = Some(PreviewRef {
+        src: src.to_path_buf(),
+        slot: slot.to_string(),
+    });
     reload_settings();
     Ok(target)
 }
@@ -212,14 +241,21 @@ pub fn restore_original(paths: &Paths, st: &mut SessionState) -> io::Result<bool
 
 pub fn reload_settings() -> bool {
     if let Ok(path) = std::env::var("PATH") {
-        if path.split(':').any(|p| std::path::Path::new(p).join("termux-reload-settings").exists()) {
-            if Command::new("termux-reload-settings").output().is_ok() {
-                unsafe { LAST_RELOAD_OK = Some(true); }
+        if path.split(':').any(|p| {
+            std::path::Path::new(p)
+                .join("termux-reload-settings")
+                .exists()
+        })
+            && Command::new("termux-reload-settings").output().is_ok() {
+                unsafe {
+                    LAST_RELOAD_OK = Some(true);
+                }
                 return true;
             }
-        }
     }
-    unsafe { LAST_RELOAD_OK = Some(false); }
+    unsafe {
+        LAST_RELOAD_OK = Some(false);
+    }
     false
 }
 

@@ -32,12 +32,23 @@ fn main() -> io::Result<()> {
     if let Some(ref name) = args.apply_font {
         let entries = fonts::scan::list_library(&paths).unwrap_or_default();
         // find entry
-        if let Some(entry) = entries.iter().find(|e| e.name == *name || e.name.to_lowercase() == name.to_lowercase()) {
+        if let Some(entry) = entries
+            .iter()
+            .find(|e| e.name == *name || e.name.to_lowercase() == name.to_lowercase())
+        {
             if let Err(e) = fonts::apply::install_font(&paths, &entry.path, &args.slot) {
                 eprintln!("error: {e}");
                 std::process::exit(1);
             }
-            println!("Applied {} to {} ({})", entry.name, args.slot, paths.font_slot_path(&args.slot).unwrap_or_default().display());
+            println!(
+                "Applied {} to {} ({})",
+                entry.name,
+                args.slot,
+                paths
+                    .font_slot_path(&args.slot)
+                    .unwrap_or_default()
+                    .display()
+            );
             return Ok(());
         } else {
             eprintln!("unknown font: {name:?}");

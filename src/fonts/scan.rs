@@ -23,7 +23,8 @@ pub struct FontDetails {
 
 pub fn describe(path: &std::path::Path) -> std::io::Result<FontDetails> {
     let data = fs::read(path)?;
-    let face = ttf_parser::Face::parse(&data, 0).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
+    let face = ttf_parser::Face::parse(&data, 0)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
     let version = face
         .names()
         .into_iter()
@@ -83,7 +84,11 @@ pub fn list_library(paths: &Paths) -> std::io::Result<Vec<FontEntry>> {
                 continue;
             }
             let path = entry.path();
-            let stem = path.file_stem().unwrap_or_default().to_string_lossy().to_string();
+            let stem = path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
             let (family, style) = family_style(&path, &stem);
             out.push(FontEntry {
                 name: name.clone(),
@@ -96,7 +101,9 @@ pub fn list_library(paths: &Paths) -> std::io::Result<Vec<FontEntry>> {
         }
     }
     out.sort_by(|a, b| {
-        a.name.to_lowercase().cmp(&b.name.to_lowercase())
+        a.name
+            .to_lowercase()
+            .cmp(&b.name.to_lowercase())
             .then(a.name.cmp(&b.name))
     });
     Ok(out)

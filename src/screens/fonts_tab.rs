@@ -2,14 +2,14 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 
 use crate::app::Command;
-use crate::screens::ScreenAction;
-use crate::fonts::{apply, importer, prompt, scan};
+use crate::fonts::{apply, prompt, scan};
 use crate::paths::Paths;
+use crate::screens::ScreenAction;
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
 use crate::ui::input::Field;
@@ -41,7 +41,9 @@ impl FontsTab {
         }
         let entries = scan::list_library(paths).unwrap_or_default();
         let mut state = ListState::default();
-        if !entries.is_empty() { state.select(Some(0)); }
+        if !entries.is_empty() {
+            state.select(Some(0));
+        }
         Self {
             entries,
             state,
@@ -57,15 +59,21 @@ impl FontsTab {
     pub fn handle_key(&mut self, key: KeyEvent, paths: &Paths) -> ScreenAction {
         match key.code {
             KeyCode::Down | KeyCode::Char('j') => {
-                if self.entries.is_empty() { return ScreenAction::None; }
+                if self.entries.is_empty() {
+                    return ScreenAction::None;
+                }
                 let i = self.state.selected().unwrap_or(0);
                 self.state.select(Some((i + 1).min(self.entries.len() - 1)));
                 ScreenAction::None
             }
             KeyCode::Up | KeyCode::Char('k') => {
-                if self.entries.is_empty() { return ScreenAction::None; }
+                if self.entries.is_empty() {
+                    return ScreenAction::None;
+                }
                 let i = self.state.selected().unwrap_or(0);
-                if i > 0 { self.state.select(Some(i - 1)); }
+                if i > 0 {
+                    self.state.select(Some(i - 1));
+                }
                 ScreenAction::None
             }
             KeyCode::Char('s') => {
@@ -75,7 +83,12 @@ impl FontsTab {
             KeyCode::Char('p') | KeyCode::Char(' ') => {
                 if let Some(i) = self.state.selected() {
                     if let Some(entry) = self.entries.get(i) {
-                        let _ = apply::preview_font(paths, &entry.path, Paths::slot_names()[self.slot], &mut self.session);
+                        let _ = apply::preview_font(
+                            paths,
+                            &entry.path,
+                            Paths::slot_names()[self.slot],
+                            &mut self.session,
+                        );
                         return ScreenAction::Status(format!("Previewing {}", entry.name));
                     }
                 }
@@ -95,9 +108,10 @@ impl FontsTab {
                 }
                 ScreenAction::None
             }
-            KeyCode::Char('i') => {
-                ScreenAction::OpenDialog(Dialog::message("Import: use CLI or copy font files to ~/.termux/fonts/", "Import"))
-            }
+            KeyCode::Char('i') => ScreenAction::OpenDialog(Dialog::message(
+                "Import: use CLI or copy font files to ~/.termux/fonts/",
+                "Import",
+            )),
             KeyCode::Char('d') => {
                 // trigger download of first nerd font as demo
                 let catalog = crate::fonts::downloader::nerd_fonts_catalog();
@@ -105,7 +119,8 @@ impl FontsTab {
                     let name_clone = name.clone();
                     let paths_clone = paths.clone();
                     std::thread::spawn(move || {
-                        let _ = crate::fonts::downloader::fetch(&paths_clone, &name_clone, false, None);
+                        let _ =
+                            crate::fonts::downloader::fetch(&paths_clone, &name_clone, false, None);
                     });
                     ScreenAction::Status(format!("Downloading {name}..."))
                 } else {
@@ -129,27 +144,65 @@ impl FontsTab {
         self.entries = scan::list_library(paths).unwrap_or_default();
         ScreenAction::None
     }
-    pub fn command(&mut self, _command: Command, _paths: &Paths) -> ScreenAction { ScreenAction::None }
-    pub fn on_dialog(&mut self, _result: DialogResult, _paths: &Paths) -> ScreenAction { ScreenAction::None }
+    pub fn command(&mut self, _command: Command, _paths: &Paths) -> ScreenAction {
+        ScreenAction::None
+    }
+    pub fn on_dialog(&mut self, _result: DialogResult, _paths: &Paths) -> ScreenAction {
+        ScreenAction::None
+    }
 
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         let prompt_lines = prompt::capture_prompt_lines();
         let layout = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(3), Constraint::Length(2), Constraint::Min(5), Constraint::Length(1)])
+            .constraints([
+                Constraint::Length(3),
+                Constraint::Length(2),
+                Constraint::Min(5),
+                Constraint::Length(1),
+            ])
             .split(area);
         // preview area
-        let preview: Vec<ratatui::text::Line> = prompt_lines.iter().map(|l| ratatui::text::Line::from(l.as_str())).collect();
-        frame.render_widget(Paragraph::new(preview).block(Block::default().borders(Borders::ALL).title("Preview")), layout[0]);
+        let preview: Vec<ratatui::text::Line> = prompt_lines
+            .iter()
+            .map(|l| ratatui::text::Line::from(l.as_str()))
+            .collect();
+        frame.render_widget(
+            Paragraph::new(preview).block(Block::default().borders(Borders::ALL).title("Preview")),
+            layout[0],
+        );
         // slot info
-        frame.render_widget(Paragraph::new(format!("Slot: {} (s to cycle)", Paths::slot_names()[self.slot])), layout[1]);
+        frame.render_widget(
+            Paragraph::new(format!(
+                "Slot: {} (s to cycle)",
+                Paths::slot_names()[self.slot]
+            )),
+            layout[1],
+        );
         // font list
-        let items: Vec<ListItem> = self.entries.iter().map(|e| ListItem::new(format!("{} - {} {}", e.name, e.family, e.style))).collect();
+        let items: Vec<ListItem> = self
+            .entries
+            .iter()
+            .map(|e| ListItem::new(format!("{} - {} {}", e.name, e.family, e.style)))
+            .collect();
         let list = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title(format!("Fonts ({})", self.entries.len())))
-            .highlight_style(Style::default().add_modifier(Modifier::BOLD).fg(palette.primary));
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(format!("Fonts ({})", self.entries.len())),
+            )
+            .highlight_style(
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .fg(palette.primary),
+            );
         frame.render_stateful_widget(list, layout[2], &mut self.state);
         // hints
-        frame.render_widget(Paragraph::new("[s]lot [p/Space]review [Enter]apply [Esc]restore [i]mport [d]ownload [/]filter"), layout[3]);
+        frame.render_widget(
+            Paragraph::new(
+                "[s]lot [p/Space]review [Enter]apply [Esc]restore [i]mport [d]ownload [/]filter",
+            ),
+            layout[3],
+        );
     }
 }

@@ -27,9 +27,9 @@ pub fn is_valid_font<P: AsRef<Path>>(path: P) -> (bool, String) {
     }
     let valid_magic = [
         [0x00, 0x01, 0x00, 0x00],
-        [b'O', b'T', b'T', b'O'],
-        [b't', b'r', b'u', b'e'],
-        [b't', b'y', b'p', b'1'],
+        *b"OTTO",
+        *b"true",
+        *b"typ1",
     ];
     if !valid_magic.iter().any(|m| m == &header) {
         return (false, format!("unknown font signature: {:?}", header));

@@ -205,30 +205,50 @@ impl App {
             return;
         }
         // Draw tab bar
-        let tab_area = Rect { x: area.x, y: area.y, width: area.width, height: 1 };
+        let tab_area = Rect {
+            x: area.x,
+            y: area.y,
+            width: area.width,
+            height: 1,
+        };
         let tab_text = match self.current_tab {
             Tab::Colors => " Colors ─┬ Fonts ─┬ App Theme ",
             Tab::Fonts => " Colors ┬ Fonts ─┬ App Theme ",
             Tab::AppTheme => " Colors ┬ Fonts ─┬ App Theme ─",
         };
         frame.render_widget(
-            Paragraph::new(tab_text)
-                .style(Style::default().fg(self.palette.primary)),
+            Paragraph::new(tab_text).style(Style::default().fg(self.palette.primary)),
             tab_area,
         );
-        let content_area = Rect { x: area.x, y: area.y + 1, width: area.width, height: area.height.saturating_sub(2) };
+        let content_area = Rect {
+            x: area.x,
+            y: area.y + 1,
+            width: area.width,
+            height: area.height.saturating_sub(2),
+        };
         if let Some(screen) = self.screens.last_mut() {
             screen.render(frame, content_area, &self.palette);
         }
         // Footer
-        let footer_area = Rect { x: area.x, y: area.y + area.height.saturating_sub(1), width: area.width, height: 1 };
+        let footer_area = Rect {
+            x: area.x,
+            y: area.y + area.height.saturating_sub(1),
+            width: area.width,
+            height: 1,
+        };
         let footer = match self.current_tab {
             Tab::Colors => "Tab/←→ switch | ↑↓ navigate | Enter select | q quit",
-            Tab::Fonts => "Tab/←→ switch | s slot | Space/p preview | Enter apply | Esc restore | i import | d download | q quit",
+            Tab::Fonts => {
+                "Tab/←→ switch | s slot | Space/p preview | Enter apply | Esc restore | i import | d download | q quit"
+            }
             Tab::AppTheme => "Tab/←→ switch | ↑↓ navigate | Ctrl+S save | Ctrl+R revert | q quit",
         };
         frame.render_widget(
-            Paragraph::new(footer).style(Style::default().bg(self.palette.panel).fg(self.palette.muted)),
+            Paragraph::new(footer).style(
+                Style::default()
+                    .bg(self.palette.panel)
+                    .fg(self.palette.muted),
+            ),
             footer_area,
         );
         if let Some((message, _)) = &self.status {

@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::Read;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
@@ -14,7 +14,7 @@ pub fn capture_prompt_lines() -> Vec<String> {
         Ok(c) => c,
         Err(_) => return vec!["$ ".to_string()],
     };
-    let _ = std::thread::sleep(Duration::from_millis(500));
+    std::thread::sleep(Duration::from_millis(500));
     let mut output = String::new();
     if let Some(mut stdout) = child.stdout.take() {
         let _ = stdout.read_to_string(&mut output);
@@ -26,5 +26,9 @@ pub fn capture_prompt_lines() -> Vec<String> {
         .map(|l| l.to_string())
         .filter(|l| !l.is_empty())
         .collect();
-    if lines.is_empty() { vec!["$ ".to_string()] } else { lines }
+    if lines.is_empty() {
+        vec!["$ ".to_string()]
+    } else {
+        lines
+    }
 }

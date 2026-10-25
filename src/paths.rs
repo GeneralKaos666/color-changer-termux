@@ -84,7 +84,7 @@ impl Paths {
             _ => {
                 return Err(crate::error::Error::Invalid(format!(
                     "unknown font slot: {slot:?}"
-                )))
+                )));
             }
         };
         Ok(self.root.join(name))
