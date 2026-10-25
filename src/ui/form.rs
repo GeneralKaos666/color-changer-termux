@@ -12,7 +12,7 @@ use crate::ui::input::Field;
 use crate::ui::text::swatch;
 
 /// Columns reserved for a field's label.
-const LABEL_WIDTH: u16 = 23;
+const LABEL_WIDTH: u16 = 26;
 
 /// Width of the inline colour chip, without its trailing gap.
 const SWATCH_WIDTH: u16 = 3;
@@ -67,6 +67,7 @@ pub fn field_row(
     } else {
         Style::default().fg(palette.foreground)
     };
+    let label = truncate(label, label_width as usize);
     frame.render_widget(Paragraph::new(label).style(label_style), label_area);
     if rest.width == 0 {
         return;
@@ -100,4 +101,17 @@ pub fn field_row(
             .scroll((0, field.display_offset() as u16)),
         input_area,
     );
+}
+
+/// Truncate `text` to at most `width` cells, adding an ellipsis when it is cut.
+fn truncate(text: &str, width: usize) -> String {
+    if text.chars().count() <= width {
+        return text.to_owned();
+    }
+    if width == 0 {
+        return String::new();
+    }
+    let mut out: String = text.chars().take(width - 1).collect();
+    out.push('…');
+    out
 }
