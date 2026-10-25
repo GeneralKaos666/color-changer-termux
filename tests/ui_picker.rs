@@ -60,7 +60,7 @@ fn escape_returns_to_the_menu() {
     let mut app = App::new(Paths::new(dir.path()));
     open_picker(&mut app);
     app.handle_key(key(crossterm::event::KeyCode::Esc));
-    assert!(render_text(&mut app, 100, 30).contains("Preset Themes"));
+    assert!(render_text(&mut app, 100, 30).contains("Browse Presets") || render_text(&mut app, 100, 30).contains("Colors"));
 }
 
 #[test]

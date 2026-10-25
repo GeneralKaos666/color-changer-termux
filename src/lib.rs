@@ -1,5 +1,7 @@
 pub mod app;
+pub mod cli;
 pub mod error;
+pub mod fonts;
 pub mod library;
 pub mod model;
 pub mod paths;

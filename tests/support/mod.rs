@@ -12,6 +12,7 @@ use termux_colors::model::app_theme::validate_value;
 use termux_colors::paths::Paths;
 use termux_colors::screens::Screen;
 use termux_colors::screens::app_theme_editor::AppThemeEditor;
+use termux_colors::screens::app_theme_tab::AppThemeTab;
 use termux_colors::screens::preset_picker::PresetPicker;
 use termux_colors::screens::terminal_editor::TerminalEditor;
 use termux_colors::ui::dialog::DialogResult;
@@ -67,7 +68,7 @@ pub fn picker_theme_path(app: &mut App) -> std::path::PathBuf {
     }
 }
 
-/// Open the terminal colour editor from the main menu.
+/// Open the terminal colour editor from the Colors tab.
 pub fn open_editor(app: &mut App) {
     app.handle_key(key(KeyCode::Down));
     app.handle_key(key(KeyCode::Enter));
@@ -142,9 +143,9 @@ pub fn save_as(app: &mut App, name: &str) {
 
 /// Open the app theme editor from the main menu.
 pub fn open_app_theme(app: &mut App) {
-    app.handle_key(key(KeyCode::Down));
-    app.handle_key(key(KeyCode::Down));
-    app.handle_key(key(KeyCode::Enter));
+    // Switch to App Theme tab (from Colors: Tab gives Fonts, Tab gives AppTheme)
+    app.handle_key(key(KeyCode::Tab));
+    app.handle_key(key(KeyCode::Tab));
 }
 
 /// Build an app on the app theme editor over a temporary directory.
@@ -163,6 +164,7 @@ pub fn app_theme_with(contents: &str) -> (App, Paths) {
 pub fn app_theme_mut(app: &mut App) -> &mut AppThemeEditor {
     match app.current_mut() {
         Screen::AppTheme(editor) => editor,
+        Screen::AppThemeTab(tab) => &mut tab.inner,
         _ => panic!("the app theme editor is not the current screen"),
     }
 }

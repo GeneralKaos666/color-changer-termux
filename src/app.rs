@@ -35,6 +35,13 @@ pub enum Command {
     Revert,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Tab {
+    Colors,
+    Fonts,
+    AppTheme,
+}
+
 /// Everything the running application owns.
 pub struct App {
     paths: Paths,
@@ -45,30 +52,37 @@ pub struct App {
     status: Option<(String, Instant)>,
     too_small: bool,
     quit: bool,
+    pub current_tab: Tab,
 }
 
 impl App {
-    /// Build the app on the main menu, themed from the active colours.
+    /// Build the app on the Colors tab.
     pub fn new(paths: Paths) -> Self {
         let colors = active_colors(&paths);
-        let Some(main) = Screen::new(ScreenKind::Main, &paths) else {
-            unreachable!("the main screen always exists");
+        let Some(colors_tab) = Screen::new(ScreenKind::ColorsTab, &paths) else {
+            unreachable!("the colors tab always exists");
         };
         Self {
             palette: Palette::from_colors(&colors),
             colors,
-            screens: vec![main],
+            screens: vec![colors_tab],
             dialog: None,
             status: None,
             too_small: false,
             quit: false,
             paths,
+            current_tab: Tab::Colors,
         }
     }
 
     /// Handle a key press from the event loop.
     pub fn handle_key(&mut self, key: KeyEvent) {
         if key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('c') {
+            // Restore preview fonts on quit
+            self.quit = true;
+            return;
+        }
+        if key.code == KeyCode::Char('q') && !key.modifiers.contains(KeyModifiers::CONTROL) {
             self.quit = true;
             return;
         }
@@ -82,6 +96,23 @@ impl App {
             if let Some(result) = dialog.handle_key(key) {
                 self.resolve_dialog(result);
             }
+            return;
+        }
+        // Tab switching
+        if key.code == KeyCode::Tab {
+            self.switch_tab(1);
+            return;
+        }
+        if key.code == KeyCode::BackTab {
+            self.switch_tab(-1);
+            return;
+        }
+        if key.code == KeyCode::Left {
+            self.switch_tab(-1);
+            return;
+        }
+        if key.code == KeyCode::Right {
+            self.switch_tab(1);
             return;
         }
         if key.modifiers.contains(KeyModifiers::CONTROL) {
@@ -101,6 +132,39 @@ impl App {
         };
         let action = screen.handle_key(key, &self.paths);
         self.apply(action);
+    }
+
+    fn switch_tab(&mut self, dir: i32) {
+        let new_tab = match (&self.current_tab, dir) {
+            (Tab::Colors, 1) => Tab::Fonts,
+            (Tab::Colors, -1) => Tab::AppTheme,
+            (Tab::Fonts, 1) => Tab::AppTheme,
+            (Tab::Fonts, -1) => Tab::Colors,
+            (Tab::AppTheme, 1) => Tab::Colors,
+            (Tab::AppTheme, -1) => Tab::Fonts,
+            _ => self.current_tab.clone(),
+        };
+        self.current_tab = new_tab.clone();
+        match new_tab {
+            Tab::Colors => {
+                if let Some(screen) = Screen::new(ScreenKind::ColorsTab, &self.paths) {
+                    self.screens.clear();
+                    self.screens.push(screen);
+                }
+            }
+            Tab::Fonts => {
+                if let Some(screen) = Screen::new(ScreenKind::FontsTab, &self.paths) {
+                    self.screens.clear();
+                    self.screens.push(screen);
+                }
+            }
+            Tab::AppTheme => {
+                if let Some(screen) = Screen::new(ScreenKind::AppThemeTab, &self.paths) {
+                    self.screens.clear();
+                    self.screens.push(screen);
+                }
+            }
+        }
     }
 
     /// Run a save or revert command against the current screen.
@@ -140,9 +204,33 @@ impl App {
             self.render_too_small(frame, area);
             return;
         }
+        // Draw tab bar
+        let tab_area = Rect { x: area.x, y: area.y, width: area.width, height: 1 };
+        let tab_text = match self.current_tab {
+            Tab::Colors => " Colors ─┬ Fonts ─┬ App Theme ",
+            Tab::Fonts => " Colors ┬ Fonts ─┬ App Theme ",
+            Tab::AppTheme => " Colors ┬ Fonts ─┬ App Theme ─",
+        };
+        frame.render_widget(
+            Paragraph::new(tab_text)
+                .style(Style::default().fg(self.palette.primary)),
+            tab_area,
+        );
+        let content_area = Rect { x: area.x, y: area.y + 1, width: area.width, height: area.height.saturating_sub(2) };
         if let Some(screen) = self.screens.last_mut() {
-            screen.render(frame, area, &self.palette);
+            screen.render(frame, content_area, &self.palette);
         }
+        // Footer
+        let footer_area = Rect { x: area.x, y: area.y + area.height.saturating_sub(1), width: area.width, height: 1 };
+        let footer = match self.current_tab {
+            Tab::Colors => "Tab/←→ switch | ↑↓ navigate | Enter select | q quit",
+            Tab::Fonts => "Tab/←→ switch | s slot | Space/p preview | Enter apply | Esc restore | i import | d download | q quit",
+            Tab::AppTheme => "Tab/←→ switch | ↑↓ navigate | Ctrl+S save | Ctrl+R revert | q quit",
+        };
+        frame.render_widget(
+            Paragraph::new(footer).style(Style::default().bg(self.palette.panel).fg(self.palette.muted)),
+            footer_area,
+        );
         if let Some((message, _)) = &self.status {
             let row = Rect {
                 x: area.x,

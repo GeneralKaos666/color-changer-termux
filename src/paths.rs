@@ -66,4 +66,31 @@ impl Paths {
     pub fn backups(&self) -> PathBuf {
         self.root.join("backups")
     }
+
+    pub fn fonts_dir(&self) -> PathBuf {
+        self.root.join("fonts")
+    }
+
+    pub fn backups_dir(&self) -> PathBuf {
+        self.root.join("backups")
+    }
+
+    pub fn font_slot_path(&self, slot: &str) -> crate::error::Result<PathBuf> {
+        let name = match slot {
+            "regular" => "font.ttf",
+            "bold" => "font-bold.ttf",
+            "italic" => "font-italic.ttf",
+            "bold-italic" => "font-bold-italic.ttf",
+            _ => {
+                return Err(crate::error::Error::Invalid(format!(
+                    "unknown font slot: {slot:?}"
+                )))
+            }
+        };
+        Ok(self.root.join(name))
+    }
+
+    pub fn slot_names() -> Vec<&'static str> {
+        vec!["regular", "bold", "italic", "bold-italic"]
+    }
 }
