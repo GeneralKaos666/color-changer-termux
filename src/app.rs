@@ -131,6 +131,7 @@ impl App {
         self.apply(action);
     }
 
+    #[allow(dead_code)]
     fn switch_tab(&mut self, _dir: i32) {
         // Drill-down menu mode; no-op
     }
