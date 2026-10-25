@@ -8,7 +8,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Paragraph};
 
 use crate::library::{ThemeRef, active_theme_path, apply_theme, reload_termux, scan_themes};
 use crate::model::colors::TerminalColors;
@@ -287,6 +287,7 @@ impl PresetPicker {
         self.memoize_canonical();
         let [list_area, preview_area] =
             Layout::horizontal([Constraint::Percentage(42), Constraint::Percentage(58)])
+                .spacing(1)
                 .areas(area);
         self.render_list(frame, list_area, palette);
         self.render_preview(frame, preview_area, palette);
@@ -295,7 +296,8 @@ impl PresetPicker {
     /// Draw the bordered filter-plus-list pane.
     fn render_list(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         let block = Block::bordered()
-            .title(format!("themes ({})", self.visible.len()))
+            .border_type(BorderType::Rounded)
+            .title(format!(" themes ({})", self.visible.len()))
             .border_style(Style::default().fg(palette.primary))
             .style(Style::default().bg(palette.surface));
         let inner = block.inner(area);
@@ -345,8 +347,8 @@ impl PresetPicker {
             .highlight_symbol("› ")
             .highlight_style(
                 Style::default()
-                    .bg(palette.boost)
-                    .fg(palette.foreground)
+                    .bg(palette.primary)
+                    .fg(palette.background)
                     .add_modifier(Modifier::BOLD),
             )
             .style(Style::default().bg(palette.surface));
@@ -356,7 +358,8 @@ impl PresetPicker {
     /// Draw the preview pane for the highlighted theme.
     fn render_preview(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         let block = Block::bordered()
-            .title("preview")
+            .border_type(BorderType::Rounded)
+            .title(" preview")
             .border_style(Style::default().fg(palette.secondary))
             .style(Style::default().bg(palette.surface));
         let inner = block.inner(area);

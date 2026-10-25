@@ -5,7 +5,7 @@ use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Paragraph};
+use ratatui::widgets::{Block, BorderType, Paragraph};
 
 use crate::app::Command;
 use crate::library::reload_termux;
@@ -305,7 +305,8 @@ impl AppThemeEditor {
     /// Draw the scrolling form of section rules and labelled rows.
     fn render_form(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         let block = Block::bordered()
-            .title("app theme")
+            .border_type(BorderType::Rounded)
+            .title(" app theme")
             .border_style(Style::default().fg(palette.primary))
             .style(Style::default().bg(palette.surface));
         let inner = block.inner(area);
@@ -438,6 +439,7 @@ fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, palet
 /// Draw the action row: Save, Revert and Back.
 fn render_actions(frame: &mut Frame, area: Rect, palette: &Palette) {
     let block = Block::bordered()
+        .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(palette.secondary))
         .style(Style::default().bg(palette.surface));
     let inner = block.inner(area);

@@ -5,7 +5,7 @@ use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Paragraph};
 
 use crate::library::{active_colors, active_theme_path};
 use crate::model::colors::TerminalColors;
@@ -158,6 +158,7 @@ impl MainMenu {
             .map(|(label, _)| ListItem::new(Line::from(format!("  {label}"))))
             .collect();
         let block = Block::bordered()
+            .border_type(BorderType::Rounded)
             .title(Line::from("menu").alignment(Alignment::Center))
             .border_style(Style::default().fg(palette.primary))
             .style(Style::default().bg(palette.surface));
@@ -166,8 +167,8 @@ impl MainMenu {
             .highlight_symbol("› ")
             .highlight_style(
                 Style::default()
-                    .bg(palette.boost)
-                    .fg(palette.foreground)
+                    .bg(palette.primary)
+                    .fg(palette.background)
                     .add_modifier(Modifier::BOLD),
             );
         frame.render_stateful_widget(list, menu_rect, &mut self.list);

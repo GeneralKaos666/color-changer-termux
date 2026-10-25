@@ -7,7 +7,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Paragraph};
+use ratatui::widgets::{Block, BorderType, Paragraph};
 
 use crate::app::Command;
 use crate::library::{active_theme_path, apply_theme, reload_termux};
@@ -403,6 +403,7 @@ impl TerminalEditor {
             Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).areas(area);
         let [form_area, preview_area] =
             Layout::horizontal([Constraint::Percentage(52), Constraint::Percentage(48)])
+                .spacing(1)
                 .areas(body);
         self.render_form(frame, form_area, palette);
         self.render_preview(frame, preview_area, palette);
@@ -412,7 +413,8 @@ impl TerminalEditor {
     /// Draw the scrolling form of labelled fields.
     fn render_form(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         let block = Block::bordered()
-            .title("terminal colors")
+            .border_type(BorderType::Rounded)
+            .title(" terminal colors")
             .border_style(Style::default().fg(palette.primary))
             .style(Style::default().bg(palette.surface));
         let inner = block.inner(area);
@@ -452,7 +454,8 @@ impl TerminalEditor {
     /// Draw the live preview of the colours the fields currently describe.
     fn render_preview(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         let block = Block::bordered()
-            .title("preview")
+            .border_type(BorderType::Rounded)
+            .title(" preview")
             .border_style(Style::default().fg(palette.secondary))
             .style(Style::default().bg(palette.surface));
         let inner = block.inner(area);
@@ -499,6 +502,7 @@ fn backup_question() -> ScreenAction {
 /// Draw the action row: Save, Save As…, Revert and Back.
 fn render_actions(frame: &mut Frame, area: Rect, palette: &Palette) {
     let block = Block::bordered()
+        .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(palette.secondary))
         .style(Style::default().bg(palette.surface));
     let inner = block.inner(area);

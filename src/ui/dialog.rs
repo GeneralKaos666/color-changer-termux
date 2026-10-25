@@ -5,7 +5,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Paragraph, Widget, Wrap};
+use ratatui::widgets::{Block, BorderType, Paragraph, Widget, Wrap};
 
 use crate::theme::Palette;
 use crate::ui::input::Field;
@@ -135,6 +135,7 @@ impl Dialog {
             height,
         };
         let block = Block::bordered()
+            .border_type(BorderType::Rounded)
             .title(self.title())
             .border_style(Style::default().fg(palette.primary))
             .style(Style::default().bg(palette.panel).fg(palette.foreground));

@@ -4,8 +4,9 @@ use std::time::{Duration, Instant};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Frame;
-use ratatui::layout::{Alignment, Rect};
-use ratatui::style::Style;
+use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::style::{Modifier, Style};
+use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Paragraph};
 
 use crate::library::active_colors;
@@ -142,8 +143,19 @@ impl App {
             self.render_too_small(frame, area);
             return;
         }
+        let at_menu = self.screens.len() == 1;
+        let (header, content) = if at_menu {
+            (None, area)
+        } else {
+            let [header_area, content_area] =
+                Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).areas(area);
+            (Some(header_area), content_area)
+        };
+        if let Some(header) = header {
+            self.render_header(frame, header);
+        }
         if let Some(screen) = self.screens.last_mut() {
-            screen.render(frame, area, &self.palette);
+            screen.render(frame, content, &self.palette);
         }
         if let Some((message, _)) = &self.status {
             let row = Rect {
@@ -168,6 +180,24 @@ impl App {
             let buffer = frame.buffer_mut();
             dialog.render(area, buffer, &palette);
         }
+    }
+
+    /// Draw the one-row breadcrumb header shown above sub-screens.
+    fn render_header(&self, frame: &mut Frame, area: Rect) {
+        let line = Line::from(vec![
+            Span::styled(" termux-colors", Style::default().fg(self.palette.muted)),
+            Span::styled(" › ", Style::default().fg(self.palette.muted)),
+            Span::styled(
+                self.current().title(),
+                Style::default()
+                    .fg(self.palette.primary)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ]);
+        frame.render_widget(
+            Paragraph::new(line).style(Style::default().bg(self.palette.panel)),
+            area,
+        );
     }
 
     /// Advance time-driven state: expire a stale status message.

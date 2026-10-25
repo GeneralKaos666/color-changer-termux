@@ -3,7 +3,7 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
+    widgets::{Block, BorderType, List, ListItem, ListState, Paragraph},
 };
 
 use crate::app::Command;
@@ -151,6 +151,14 @@ impl FontsTab {
     }
 
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
+        frame.render_widget(
+            Block::default().style(
+                Style::default()
+                    .bg(palette.background)
+                    .fg(palette.foreground),
+            ),
+            area,
+        );
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -167,7 +175,13 @@ impl FontsTab {
             .map(|l| ratatui::text::Line::from(l.as_str()))
             .collect();
         frame.render_widget(
-            Paragraph::new(preview).block(Block::default().borders(Borders::ALL).title("Preview")),
+            Paragraph::new(preview).block(
+                Block::bordered()
+                    .border_type(BorderType::Rounded)
+                    .title(" Preview")
+                    .border_style(Style::default().fg(palette.secondary))
+                    .style(Style::default().bg(palette.surface)),
+            ),
             layout[0],
         );
         // slot info
@@ -175,7 +189,8 @@ impl FontsTab {
             Paragraph::new(format!(
                 "Slot: {} (s to cycle)",
                 Paths::slot_names()[self.slot]
-            )),
+            ))
+            .style(Style::default().fg(palette.foreground)),
             layout[1],
         );
         // font list
@@ -186,21 +201,25 @@ impl FontsTab {
             .collect();
         let list = List::new(items)
             .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(format!("Fonts ({})", self.entries.len())),
+                Block::bordered()
+                    .border_type(BorderType::Rounded)
+                    .title(format!(" Fonts ({})", self.entries.len()))
+                    .border_style(Style::default().fg(palette.primary))
+                    .style(Style::default().bg(palette.surface)),
             )
             .highlight_style(
                 Style::default()
-                    .add_modifier(Modifier::BOLD)
-                    .fg(palette.primary),
+                    .bg(palette.primary)
+                    .fg(palette.background)
+                    .add_modifier(Modifier::BOLD),
             );
         frame.render_stateful_widget(list, layout[2], &mut self.state);
         // hints
         frame.render_widget(
             Paragraph::new(
                 "[s]lot [p/Space]review [Enter]apply [Esc]restore [i]mport [d]ownload [/]filter",
-            ),
+            )
+            .style(Style::default().fg(palette.muted)),
             layout[3],
         );
     }

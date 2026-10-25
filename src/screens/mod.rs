@@ -109,6 +109,19 @@ impl Screen {
         }
     }
 
+    /// The section name shown in the breadcrumb header, or `""` at the menu.
+    pub fn title(&self) -> &'static str {
+        match self {
+            Self::Main(_) => "",
+            Self::Presets(_) => "Preset Themes",
+            Self::Terminal(_) => "Terminal Colors",
+            Self::AppTheme(_) => "App Theme",
+            Self::ColorsTab(_) => "Colors",
+            Self::FontsTab(_) => "Fonts",
+            Self::AppThemeTab(_) => "App Theme",
+        }
+    }
+
     /// The action a freshly pushed screen wants the app to apply.
     pub fn opened(&mut self, paths: &Paths) -> ScreenAction {
         match self {
