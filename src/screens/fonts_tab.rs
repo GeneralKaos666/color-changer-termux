@@ -22,8 +22,6 @@ pub struct FontsTab {
     show_filter: bool,
     slot: usize,
     session: apply::SessionState,
-    downloading: bool,
-    download_progress: (i64, i64),
 }
 
 impl FontsTab {
@@ -51,8 +49,6 @@ impl FontsTab {
             show_filter: false,
             slot: 0,
             session: apply::new_session_state(paths),
-            downloading: false,
-            download_progress: (0, -1),
         }
     }
 

@@ -245,13 +245,13 @@ pub fn reload_settings() -> bool {
             std::path::Path::new(p)
                 .join("termux-reload-settings")
                 .exists()
-        })
-            && Command::new("termux-reload-settings").output().is_ok() {
-                unsafe {
-                    LAST_RELOAD_OK = Some(true);
-                }
-                return true;
+        }) && Command::new("termux-reload-settings").output().is_ok()
+        {
+            unsafe {
+                LAST_RELOAD_OK = Some(true);
             }
+            return true;
+        }
     }
     unsafe {
         LAST_RELOAD_OK = Some(false);

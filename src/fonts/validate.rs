@@ -25,12 +25,7 @@ pub fn is_valid_font<P: AsRef<Path>>(path: P) -> (bool, String) {
         Ok(_) => {}
         Err(_) => return (false, "file is too small to be a font".to_string()),
     }
-    let valid_magic = [
-        [0x00, 0x01, 0x00, 0x00],
-        *b"OTTO",
-        *b"true",
-        *b"typ1",
-    ];
+    let valid_magic = [[0x00, 0x01, 0x00, 0x00], *b"OTTO", *b"true", *b"typ1"];
     if !valid_magic.iter().any(|m| m == &header) {
         return (false, format!("unknown font signature: {:?}", header));
     }
