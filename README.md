@@ -126,19 +126,20 @@ keys. The common ones:
 | `PageUp` / `PageDown` | jump ten items |
 | `Enter` | activate the focused item or button |
 | `Esc` | go back; quits from the main menu |
-| `Ctrl+C` / `Ctrl+Q` | quit from anywhere, including dialogs |
+| `q` / `Ctrl+C` / `Ctrl+Q` | quit from anywhere, including dialogs |
 | `Ctrl+S` | save (editors) |
 | `Ctrl+A` | save as a new theme (Terminal Colors) |
 | `Ctrl+R` | revert unsaved edits (editors) |
 | `r` | reload the theme library (Preset Themes) |
-| `p` / `Space` | preview the selected font (Fonts) |
+| `p` / `Space` | preview the selected font into the current slot (Fonts) |
 | `s` | cycle the font slot (Fonts) |
-| `i` | import fonts (Fonts) |
-| `d` | download a Nerd Font (Fonts) |
-| `/` | toggle the font filter (Fonts) |
+| `i` | import a font file (Fonts) |
+| `d` | open the Nerd Font catalog to download a font (Fonts) |
+| `/` | filter the list (Fonts) |
 
 In Preset Themes, `Tab` focuses the filter box; type to search the library. In
-Fonts, `/` toggles the same kind of filter.
+Fonts, `/` opens the same kind of filter (matched against the font's name,
+family and style); `Esc` clears it, then leaves the screen.
 
 ### Command line
 
@@ -153,8 +154,13 @@ termux-settings --ascii                    # plain-ASCII glyphs
 
 `--slot` takes `regular`, `bold`, `italic`, or `bold-italic` (default
 `regular`). `--ascii` (or `TERMUX_SETTINGS_ASCII=1`) swaps the Unicode glyphs for
-plain-ASCII equivalents; the legacy `TERMUX_COLORS_ASCII` and `FONT_CHANGER_ASCII`
-variables are still honoured.
+plain-ASCII equivalents everywhere — pane and dialog borders, the selection
+markers, and the help bar; the legacy `TERMUX_COLORS_ASCII` and
+`FONT_CHANGER_ASCII` variables are still honoured.
+
+Exit codes: `--list-fonts` exits `1` when the font library exists but cannot be
+read; `--apply-font` with an unknown name, or `--slot` with an unknown slot,
+exits `2`. Any other error exits `1`.
 
 ## Relationship to `colors.sh`
 
