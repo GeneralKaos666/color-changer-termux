@@ -8,6 +8,7 @@ pub mod model;
 pub mod paths;
 pub mod persist;
 pub mod presets;
+pub mod runtime;
 pub mod screens;
 pub mod terminal;
 pub mod theme;

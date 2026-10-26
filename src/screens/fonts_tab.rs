@@ -12,6 +12,7 @@ use crate::chrome;
 use crate::fonts::{apply, prompt, scan};
 use crate::model::font_slot::FontSlot;
 use crate::paths::Paths;
+use crate::runtime::Msg;
 use crate::screens::ScreenAction;
 use crate::ui::dialog::{Dialog, DialogResult};
 use crate::ui::input::Field;
@@ -157,6 +158,21 @@ impl FontsTab {
             let _ = apply::restore_original(paths, &mut self.session);
         }
         ScreenAction::None
+    }
+
+    /// Handle a worker message: a captured prompt or a fresh library scan.
+    pub fn on_msg(&mut self, msg: &Msg, _paths: &Paths) -> ScreenAction {
+        match msg {
+            Msg::PromptCaptured(lines) => {
+                self.prompt = lines.clone();
+                ScreenAction::None
+            }
+            Msg::FontsScanned(Ok(entries)) => {
+                self.entries = entries.clone();
+                ScreenAction::None
+            }
+            _ => ScreenAction::None,
+        }
     }
 
     /// The key bindings the help bar shows for this screen.

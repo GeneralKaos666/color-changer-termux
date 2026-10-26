@@ -12,6 +12,7 @@ use termux_settings::cli::Args;
 use termux_settings::fonts;
 use termux_settings::model::font_slot::FontSlot;
 use termux_settings::paths::Paths;
+use termux_settings::runtime::{Msg, Runtime, TICK};
 use termux_settings::terminal;
 use termux_settings::ui::Glyphs;
 
@@ -59,16 +60,24 @@ fn main() -> io::Result<()> {
     let _guard = terminal::Terminal::enter()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
     let mut app = App::with_glyphs(paths, glyphs);
+    let runtime = Runtime::new();
 
     loop {
-        app.tick(Instant::now());
-        terminal.draw(|frame| app.render(frame))?;
-        match event::read()? {
-            Event::Key(key) if key.kind != KeyEventKind::Release => app.handle_key(key),
-            _ => {}
+        for msg in runtime.drain() {
+            app.update(msg);
         }
+        terminal.draw(|frame| app.render(frame))?;
         if app.should_quit() {
             break;
+        }
+        if event::poll(TICK)? {
+            match event::read()? {
+                Event::Key(key) if key.kind != KeyEventKind::Release => app.update(Msg::Key(key)),
+                Event::Resize(width, height) => app.update(Msg::Resize(width, height)),
+                _ => {}
+            }
+        } else {
+            app.update(Msg::Tick(Instant::now()));
         }
     }
     Ok(())

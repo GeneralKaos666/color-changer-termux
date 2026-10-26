@@ -13,6 +13,7 @@ use ratatui::layout::Rect;
 use crate::app::Command;
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
+use crate::runtime::Msg;
 use crate::ui::Ui;
 use crate::ui::dialog::{Dialog, DialogResult};
 
@@ -155,6 +156,17 @@ impl Screen {
     pub fn on_quit(&mut self, paths: &Paths) -> ScreenAction {
         match self {
             Self::FontsTab(screen) => screen.on_quit(paths),
+            _ => ScreenAction::None,
+        }
+    }
+
+    /// Re-derive geometry after a resize.
+    pub fn on_resize(&mut self, _area: Rect) {}
+
+    /// Handle a worker message, if this screen cares.
+    pub fn on_msg(&mut self, msg: &Msg, paths: &Paths) -> ScreenAction {
+        match self {
+            Self::FontsTab(screen) => screen.on_msg(msg, paths),
             _ => ScreenAction::None,
         }
     }

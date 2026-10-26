@@ -13,6 +13,7 @@ use crate::chrome;
 use crate::library::active_colors;
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
+use crate::runtime::Msg;
 use crate::screens::{Screen, ScreenAction, ScreenKind};
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
@@ -48,6 +49,7 @@ pub struct App {
     glyphs: Glyphs,
     status: Option<(String, Instant)>,
     too_small: bool,
+    area: Rect,
     quit: bool,
 }
 
@@ -70,6 +72,7 @@ impl App {
             dialog: None,
             status: None,
             too_small: false,
+            area: Rect::default(),
             quit: false,
             paths,
             glyphs,
@@ -148,7 +151,11 @@ impl App {
 
     /// Draw the current screen and, when set, the status line.
     pub fn render(&mut self, frame: &mut Frame) {
-        let area = frame.area();
+        let area = if self.area.width > 0 && self.area.height > 0 {
+            self.area
+        } else {
+            frame.area()
+        };
         self.too_small = area.width < MIN_WIDTH || area.height < MIN_HEIGHT;
         if self.too_small {
             self.render_too_small(frame, area);
@@ -231,6 +238,30 @@ impl App {
             && now.duration_since(*shown) >= STATUS_TTL
         {
             self.status = None;
+        }
+    }
+
+    /// Apply one message from the event loop or a worker.
+    pub fn update(&mut self, msg: Msg) {
+        match msg {
+            Msg::Tick(now) => self.tick(now),
+            Msg::Key(key) => self.handle_key(key),
+            Msg::Resize(width, height) => self.set_area(Rect::new(0, 0, width, height)),
+            _ => {
+                let paths = self.paths.clone();
+                if let Some(screen) = self.screens.last_mut() {
+                    let action = screen.on_msg(&msg, &paths);
+                    self.apply(action);
+                }
+            }
+        }
+    }
+
+    /// Record the terminal size and let the current screen re-derive geometry.
+    pub fn set_area(&mut self, area: Rect) {
+        self.area = area;
+        if let Some(screen) = self.screens.last_mut() {
+            screen.on_resize(area);
         }
     }
 
