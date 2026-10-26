@@ -1,8 +1,9 @@
 mod support;
 
-use support::render_text;
+use support::{open_picker, render_text};
 use termux_settings::app::App;
 use termux_settings::paths::Paths;
+use termux_settings::ui::Glyphs;
 
 #[test]
 fn header_and_help_bar_render_on_the_menu() {
@@ -36,11 +37,9 @@ fn menu_still_renders_at_the_minimum_size() {
 #[test]
 fn breadcrumb_uses_ascii_separator_in_ascii_mode() {
     let dir = tempfile::tempdir().unwrap();
-    let mut app = App::new(Paths::new(dir.path()));
-    support::open_picker(&mut app);
-    termux_settings::ui::ascii::set_ascii(true);
+    let mut app = App::with_glyphs(Paths::new(dir.path()), Glyphs::new(true));
+    open_picker(&mut app);
     let rendered = render_text(&mut app, 80, 20);
     assert!(!rendered.contains('›'));
     assert!(rendered.contains('>'));
-    termux_settings::ui::ascii::set_ascii(false);
 }

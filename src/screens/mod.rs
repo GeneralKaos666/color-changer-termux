@@ -13,7 +13,7 @@ use ratatui::layout::Rect;
 use crate::app::Command;
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
-use crate::theme::Palette;
+use crate::ui::Ui;
 use crate::ui::dialog::{Dialog, DialogResult};
 
 use self::app_theme_editor::AppThemeEditor;
@@ -160,13 +160,13 @@ impl Screen {
     }
 
     /// Draw the screen into `area`.
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
         match self {
-            Self::Main(screen) => screen.render(frame, area, palette),
-            Self::Presets(screen) => screen.render(frame, area, palette),
-            Self::Terminal(screen) => screen.render(frame, area, palette),
-            Self::AppTheme(screen) => screen.render(frame, area, palette),
-            Self::FontsTab(screen) => screen.render(frame, area, palette),
+            Self::Main(screen) => screen.render(frame, area, ui),
+            Self::Presets(screen) => screen.render(frame, area, ui),
+            Self::Terminal(screen) => screen.render(frame, area, ui),
+            Self::AppTheme(screen) => screen.render(frame, area, ui),
+            Self::FontsTab(screen) => screen.render(frame, area, ui),
         }
     }
 }

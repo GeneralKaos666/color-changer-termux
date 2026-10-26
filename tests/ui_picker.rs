@@ -74,7 +74,7 @@ fn moving_the_selection_retints_the_ui() {
     let dir = tempfile::tempdir().unwrap();
     let mut app = App::new(Paths::new(dir.path()));
     open_picker(&mut app);
-    let before = app.palette().clone();
+    let before = *app.palette();
     app.handle_key(key(crossterm::event::KeyCode::Down));
     assert_ne!(before, *app.palette());
     assert!(app.palette().background != Color::Rgb(0, 0, 0));

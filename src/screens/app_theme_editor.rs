@@ -4,7 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::widgets::{Block, BorderType, Paragraph};
+use ratatui::widgets::{Block, Paragraph};
 
 use crate::app::Command;
 use crate::chrome;
@@ -14,11 +14,10 @@ use crate::paths::Paths;
 use crate::persist::backup::make_backup;
 use crate::persist::theme_io::{read_app_theme, write_app_theme};
 use crate::screens::ScreenAction;
-use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
 use crate::ui::form;
-use crate::ui::glyphs;
 use crate::ui::input::Field;
+use crate::ui::{Ui, pane};
 
 /// Form rows the editor assumes are visible until the first render measures
 /// the pane.
@@ -299,26 +298,21 @@ impl AppThemeEditor {
     }
 
     /// Draw the form.
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
                 Style::default()
-                    .bg(palette.background)
-                    .fg(palette.foreground),
+                    .bg(ui.palette.background)
+                    .fg(ui.palette.foreground),
             ),
             area,
         );
-        self.render_form(frame, area, palette);
+        self.render_form(frame, area, ui);
     }
 
     /// Draw the scrolling form of section rules and labelled rows.
-    fn render_form(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
-        let block = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(" app theme")
-            .title_alignment(Alignment::Left)
-            .border_style(Style::default().fg(chrome::accent(palette.dark)))
-            .style(Style::default().bg(palette.surface));
+    fn render_form(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+        let block = pane(ui, " app theme");
         let inner = block.inner(area);
         frame.render_widget(block, area);
         if inner.width == 0 || inner.height == 0 {
@@ -338,18 +332,18 @@ impl AppThemeEditor {
             match *slot {
                 Slot::Hint => frame.render_widget(
                     Paragraph::new(format!("Editing {}", self.path_hint))
-                        .style(Style::default().fg(palette.muted)),
+                        .style(Style::default().fg(ui.palette.muted)),
                     row_area,
                 ),
                 Slot::Section(section) => {
-                    form::section_rule(frame, row_area, section, palette);
+                    form::section_rule(frame, row_area, section, ui);
                 }
                 Slot::Field(index) => render_row(
                     frame,
                     row_area,
                     &mut self.rows[index],
                     self.focus == index,
-                    palette,
+                    ui,
                 ),
             }
         }
@@ -380,7 +374,7 @@ fn row_of(index: usize) -> usize {
 }
 
 /// Draw one row: label, a selector or text field, and the key name.
-fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, palette: &Palette) {
+fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, ui: &Ui) {
     if area.width == 0 || area.height == 0 {
         return;
     }
@@ -393,13 +387,13 @@ fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, palet
         format!("{}  ·  {}", row.spec.label, row.spec.help)
     };
     let label_style = if row.invalid {
-        Style::default().fg(palette.error)
+        Style::default().fg(ui.palette.error)
     } else if focused {
         Style::default()
-            .fg(palette.primary)
+            .fg(ui.palette.primary)
             .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(palette.foreground)
+        Style::default().fg(ui.palette.foreground)
     };
     frame.render_widget(Paragraph::new(label).style(label_style), label_area);
     if rest.width == 0 {
@@ -415,21 +409,23 @@ fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, palet
         Layout::horizontal([Constraint::Min(1), Constraint::Length(key_width)]).areas(rest);
 
     let control_style = if row.invalid {
-        Style::default().fg(palette.error).bg(palette.boost)
+        Style::default().fg(ui.palette.error).bg(ui.palette.boost)
     } else if focused {
         Style::default()
             .fg(Color::White)
-            .bg(chrome::accent(palette.dark))
+            .bg(chrome::accent(ui.palette.dark))
     } else {
-        Style::default().fg(palette.foreground).bg(palette.boost)
+        Style::default()
+            .fg(ui.palette.foreground)
+            .bg(ui.palette.boost)
     };
     if row.is_selector() {
         let current = row.value.clone().unwrap_or_else(|| "unset".to_owned());
         frame.render_widget(
             Paragraph::new(format!(
                 "{} {current} {}",
-                glyphs::chip().0,
-                glyphs::chip().1
+                ui.glyphs.chip().0,
+                ui.glyphs.chip().1
             ))
             .style(control_style),
             control_area,
@@ -447,7 +443,7 @@ fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, palet
         frame.render_widget(
             Paragraph::new(row.spec.key)
                 .alignment(Alignment::Right)
-                .style(Style::default().fg(palette.muted)),
+                .style(Style::default().fg(ui.palette.muted)),
             key_area,
         );
     }

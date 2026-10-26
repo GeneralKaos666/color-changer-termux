@@ -92,7 +92,7 @@ fn rgb_color(rgb: Rgb) -> Color {
 }
 
 /// The concrete colour set derived from a managed terminal palette.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Palette {
     pub background: Color,
     pub foreground: Color,

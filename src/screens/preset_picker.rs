@@ -5,10 +5,10 @@ use std::path::PathBuf;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
 
 use crate::chrome;
 use crate::library::{ThemeRef, active_theme_path, apply_theme, reload_termux, scan_themes};
@@ -17,11 +17,10 @@ use crate::paths::Paths;
 use crate::persist::colors_io::read_colors;
 use crate::presets::materialize;
 use crate::screens::ScreenAction;
-use crate::theme::Palette;
 use crate::ui::focus::{Move, list_move};
-use crate::ui::glyphs;
 use crate::ui::input::Field;
 use crate::ui::text;
+use crate::ui::{Ui, pane};
 
 /// Rows a page key jumps in the theme list.
 const PAGE: usize = 10;
@@ -290,12 +289,12 @@ impl PresetPicker {
     }
 
     /// Draw the filter, the theme list and the preview.
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
                 Style::default()
-                    .bg(palette.background)
-                    .fg(palette.foreground),
+                    .bg(ui.palette.background)
+                    .fg(ui.palette.foreground),
             ),
             area,
         );
@@ -304,18 +303,14 @@ impl PresetPicker {
             Layout::horizontal([Constraint::Percentage(42), Constraint::Percentage(58)])
                 .spacing(1)
                 .areas(area);
-        self.render_list(frame, list_area, palette);
-        self.render_preview(frame, preview_area, palette);
+        self.render_list(frame, list_area, ui);
+        self.render_preview(frame, preview_area, ui);
     }
 
     /// Draw the bordered filter-plus-list pane.
-    fn render_list(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
-        let block = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(format!(" themes ({})", self.visible.len()))
-            .title_alignment(Alignment::Left)
-            .border_style(Style::default().fg(chrome::accent(palette.dark)))
-            .style(Style::default().bg(palette.surface));
+    fn render_list(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+        let title = format!(" themes ({})", self.visible.len());
+        let block = pane(ui, &title);
         let inner = block.inner(area);
         frame.render_widget(block, area);
         if inner.width == 0 || inner.height == 0 {
@@ -326,12 +321,14 @@ impl PresetPicker {
 
         self.filter.set_width(filter_area.width as usize);
         let filter_style = if self.focus == Focus::Filter {
-            Style::default().bg(palette.boost).fg(palette.foreground)
+            Style::default()
+                .bg(ui.palette.boost)
+                .fg(ui.palette.foreground)
         } else {
-            Style::default().fg(palette.muted)
+            Style::default().fg(ui.palette.muted)
         };
         let text = if self.filter.value().is_empty() {
-            format!("{}filter themes", glyphs::filter())
+            format!("{}filter themes", ui.glyphs.filter())
         } else {
             self.filter.value().to_owned()
         };
@@ -339,7 +336,7 @@ impl PresetPicker {
 
         let items: Vec<ListItem> = if self.visible.is_empty() {
             vec![ListItem::new(
-                Line::from("No themes found.").style(Style::default().fg(palette.muted)),
+                Line::from("No themes found.").style(Style::default().fg(ui.palette.muted)),
             )]
         } else {
             self.visible
@@ -349,9 +346,9 @@ impl PresetPicker {
                     let mut spans = vec![Span::raw(theme.label())];
                     if self.is_active(theme) {
                         spans.push(Span::styled(
-                            format!("  {} active", glyphs::dot()),
+                            format!("  {} active", ui.glyphs.dot()),
                             Style::default()
-                                .fg(chrome::accent(palette.dark))
+                                .fg(chrome::accent(ui.palette.dark))
                                 .add_modifier(Modifier::BOLD),
                         ));
                     }
@@ -360,25 +357,20 @@ impl PresetPicker {
                 .collect()
         };
         let list = List::new(items)
-            .highlight_symbol(glyphs::marker())
+            .highlight_symbol(ui.glyphs.marker())
             .highlight_style(
                 Style::default()
-                    .bg(chrome::accent(palette.dark))
+                    .bg(chrome::accent(ui.palette.dark))
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
             )
-            .style(Style::default().bg(palette.surface));
+            .style(Style::default().bg(ui.palette.surface));
         frame.render_stateful_widget(list, list_area, &mut self.list);
     }
 
     /// Draw the preview pane for the highlighted theme.
-    fn render_preview(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
-        let block = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(" preview")
-            .title_alignment(Alignment::Left)
-            .border_style(Style::default().fg(chrome::accent(palette.dark)))
-            .style(Style::default().bg(palette.surface));
+    fn render_preview(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+        let block = pane(ui, " preview");
         let inner = block.inner(area);
         frame.render_widget(block, area);
         if inner.width == 0 || inner.height == 0 {
@@ -386,7 +378,7 @@ impl PresetPicker {
         }
         let Some(row) = self.selected_row() else {
             frame.render_widget(
-                Paragraph::new("No themes found.").style(Style::default().fg(palette.muted)),
+                Paragraph::new("No themes found.").style(Style::default().fg(ui.palette.muted)),
                 inner,
             );
             return;
@@ -399,19 +391,23 @@ impl PresetPicker {
         let mut name = vec![Span::styled(
             theme.label(),
             Style::default()
-                .fg(palette.primary)
+                .fg(ui.palette.primary)
                 .add_modifier(Modifier::BOLD),
         )];
         if self.is_active(&theme) {
             name.push(Span::styled(
-                format!("  {} active", glyphs::dot()),
+                format!("  {} active", ui.glyphs.dot()),
                 Style::default()
-                    .fg(chrome::accent(palette.dark))
+                    .fg(chrome::accent(ui.palette.dark))
                     .add_modifier(Modifier::BOLD),
             ));
         }
         let mut lines = vec![Line::from(name), Line::from("")];
-        lines.extend(text::mock_session(&colors).into_iter().take(PREVIEW_LINES));
+        lines.extend(
+            text::mock_session(&colors, ui.glyphs)
+                .into_iter()
+                .take(PREVIEW_LINES),
+        );
         lines.push(Line::from(""));
         lines.extend(text::swatch_grid(&colors));
         lines.push(Line::from(""));
@@ -419,7 +415,7 @@ impl PresetPicker {
         lines.push(Line::from(""));
         lines.push(Line::from(Span::styled(
             format!("{} · {}", theme.group, theme.path.display()),
-            Style::default().fg(palette.muted),
+            Style::default().fg(ui.palette.muted),
         )));
         frame.render_widget(Paragraph::new(lines), inner);
     }

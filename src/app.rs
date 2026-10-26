@@ -6,7 +6,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
-use ratatui::text::{Line, Span};
+use ratatui::text::Span;
 use ratatui::widgets::{Block, Paragraph};
 
 use crate::chrome;
@@ -16,7 +16,7 @@ use crate::paths::Paths;
 use crate::screens::{Screen, ScreenAction, ScreenKind};
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
-use crate::ui::glyphs;
+use crate::ui::{Glyphs, Ui};
 
 /// Smallest terminal width the screens are drawn at.
 pub const MIN_WIDTH: u16 = 40;
@@ -45,14 +45,20 @@ pub struct App {
     dialog: Option<Dialog>,
     colors: TerminalColors,
     palette: Palette,
+    glyphs: Glyphs,
     status: Option<(String, Instant)>,
     too_small: bool,
     quit: bool,
 }
 
 impl App {
-    /// Build the app on the main menu.
+    /// Build the app on the main menu with Unicode glyphs.
     pub fn new(paths: Paths) -> Self {
+        Self::with_glyphs(paths, Glyphs::new(false))
+    }
+
+    /// Build the app on the main menu with the given glyph set.
+    pub fn with_glyphs(paths: Paths, glyphs: Glyphs) -> Self {
         let colors = active_colors(&paths);
         let Some(main) = Screen::new(ScreenKind::Main, &paths) else {
             unreachable!("the main menu always exists");
@@ -66,6 +72,7 @@ impl App {
             too_small: false,
             quit: false,
             paths,
+            glyphs,
         }
     }
 
@@ -73,8 +80,8 @@ impl App {
     pub fn handle_key(&mut self, key: KeyEvent) {
         let quit_chord = key.modifiers.contains(KeyModifiers::CONTROL)
             && matches!(key.code, KeyCode::Char('c') | KeyCode::Char('q'));
-        let quit_plain = !key.modifiers.contains(KeyModifiers::CONTROL)
-            && key.code == KeyCode::Char('q');
+        let quit_plain =
+            !key.modifiers.contains(KeyModifiers::CONTROL) && key.code == KeyCode::Char('q');
         if quit_chord || quit_plain {
             self.request_quit();
             return;
@@ -147,68 +154,72 @@ impl App {
             self.render_too_small(frame, area);
             return;
         }
+        let ui = Ui {
+            palette: self.palette,
+            glyphs: self.glyphs,
+        };
         let [header_area, content_area, footer_area] = Layout::vertical([
             Constraint::Length(1),
             Constraint::Min(0),
             Constraint::Length(1),
         ])
         .areas(area);
-        self.render_header(frame, header_area);
+        self.render_header(frame, header_area, &ui);
         if let Some(screen) = self.screens.last_mut() {
-            screen.render(frame, content_area, &self.palette);
+            screen.render(frame, content_area, &ui);
         }
-        self.render_footer(frame, footer_area);
+        self.render_footer(frame, footer_area, &ui);
         if let Some(dialog) = &self.dialog {
-            let palette = self.palette.clone();
             let buffer = frame.buffer_mut();
-            dialog.render(area, buffer, &palette);
+            dialog.render(area, buffer, &ui);
         }
     }
 
     /// Draw the one-row header: the gradient title and, on sub-screens, the
     /// breadcrumb section.
-    fn render_header(&self, frame: &mut Frame, area: Rect) {
-        let mut spans = chrome::gradient_title("termux-settings", self.palette.dark);
+    fn render_header(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
+        let mut title = chrome::gradient_title("termux-settings", ui.palette.dark);
         if self.screens.len() > 1 {
-            spans.push(Span::styled(
-                format!(" {} ", glyphs::breadcrumb()),
-                Style::default().fg(self.palette.muted),
+            title.spans.push(Span::styled(
+                format!(" {} ", ui.glyphs.breadcrumb()),
+                Style::default().fg(ui.palette.muted),
             ));
-            spans.push(Span::styled(
+            title.spans.push(Span::styled(
                 self.current().title(),
                 Style::default()
-                    .fg(chrome::accent(self.palette.dark))
+                    .fg(chrome::accent(ui.palette.dark))
                     .add_modifier(Modifier::BOLD),
             ));
         }
         frame.render_widget(
-            Paragraph::new(Line::from(spans)).style(Style::default().bg(self.palette.panel)),
+            Paragraph::new(title).style(Style::default().bg(ui.palette.panel)),
             area,
         );
     }
 
     /// Draw the bottom row: the status message when set, otherwise the
     /// context-sensitive help bar.
-    fn render_footer(&self, frame: &mut Frame, area: Rect) {
+    fn render_footer(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         if let Some((message, _)) = &self.status {
             frame.render_widget(
                 Paragraph::new(message.as_str())
                     .alignment(Alignment::Center)
                     .style(
                         Style::default()
-                            .bg(self.palette.panel)
-                            .fg(self.palette.foreground),
+                            .bg(ui.palette.panel)
+                            .fg(ui.palette.foreground),
                     ),
                 area,
             );
         } else {
             let line = chrome::help_bar(
                 &self.current().help(),
-                chrome::accent(self.palette.dark),
-                self.palette.muted,
+                chrome::accent(ui.palette.dark),
+                ui.palette.muted,
+                ui.glyphs,
             );
             frame.render_widget(
-                Paragraph::new(line).style(Style::default().bg(self.palette.panel)),
+                Paragraph::new(line).style(Style::default().bg(ui.palette.panel)),
                 area,
             );
         }

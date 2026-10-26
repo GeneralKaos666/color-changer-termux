@@ -9,7 +9,7 @@ use ratatui::text::{Line, Span};
 
 use crate::model::colors::{Rgb, TerminalColors};
 use crate::theme::{ensure_contrast, relative_luminance};
-use crate::ui::glyphs;
+use crate::ui::glyphs::Glyphs;
 
 /// Return black or white, whichever reads better on `color`.
 ///
@@ -90,7 +90,7 @@ pub fn swatch_grid(colors: &TerminalColors) -> Vec<Line<'static>> {
 }
 
 /// A fake shell session rendered in `colors`, one [`Line`] per screen row.
-pub fn mock_session(colors: &TerminalColors) -> Vec<Line<'static>> {
+pub fn mock_session(colors: &TerminalColors, glyphs: Glyphs) -> Vec<Line<'static>> {
     let palette = colors.palette;
     let background = colors.background;
     let ink = |index: usize| ensure_contrast(palette[index], background, 2.5);
@@ -129,7 +129,7 @@ pub fn mock_session(colors: &TerminalColors) -> Vec<Line<'static>> {
 
     let tests = Line::from(vec![
         Span::raw("  "),
-        bold(glyphs::tick(), ink(2)),
+        bold(glyphs.tick(), ink(2)),
         plain("31 passed", ink(2)),
         plain(" in 2.5s", colors.foreground),
     ]);
@@ -195,7 +195,10 @@ mod tests {
 
     #[test]
     fn mock_session_has_seven_lines_and_a_prompt() {
-        let lines = mock_session(&TerminalColors::default());
+        let lines = mock_session(
+            &TerminalColors::default(),
+            crate::ui::glyphs::Glyphs::new(false),
+        );
         assert_eq!(lines.len(), 7);
         assert!(all_text(&lines).starts_with("user@termux"));
     }

@@ -4,24 +4,23 @@ use std::path::PathBuf;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Paragraph};
+use ratatui::widgets::{Block, Paragraph};
 
 use crate::app::Command;
-use crate::chrome;
 use crate::library::{active_theme_path, apply_theme, reload_termux};
 use crate::model::colors::{ColorField, PALETTE_SIZE, Rgb, TerminalColors};
 use crate::paths::Paths;
 use crate::persist::backup::make_backup;
 use crate::persist::colors_io::{read_colors, write_colors};
 use crate::screens::ScreenAction;
-use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
 use crate::ui::form;
 use crate::ui::input::Field;
 use crate::ui::text;
+use crate::ui::{Ui, pane};
 
 /// Number of editable fields: background, foreground, cursor and the palette.
 pub const FIELD_COUNT: usize = 3 + PALETTE_SIZE;
@@ -403,12 +402,12 @@ impl TerminalEditor {
     }
 
     /// Draw the form and the preview.
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
                 Style::default()
-                    .bg(palette.background)
-                    .fg(palette.foreground),
+                    .bg(ui.palette.background)
+                    .fg(ui.palette.foreground),
             ),
             area,
         );
@@ -416,18 +415,13 @@ impl TerminalEditor {
             Layout::horizontal([Constraint::Percentage(52), Constraint::Percentage(48)])
                 .spacing(1)
                 .areas(area);
-        self.render_form(frame, form_area, palette);
-        self.render_preview(frame, preview_area, palette);
+        self.render_form(frame, form_area, ui);
+        self.render_preview(frame, preview_area, ui);
     }
 
     /// Draw the scrolling form of labelled fields.
-    fn render_form(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
-        let block = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(" terminal colors")
-            .title_alignment(Alignment::Left)
-            .border_style(Style::default().fg(chrome::accent(palette.dark)))
-            .style(Style::default().bg(palette.surface));
+    fn render_form(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+        let block = pane(ui, " terminal colors");
         let inner = block.inner(area);
         frame.render_widget(block, area);
         if inner.width == 0 || inner.height == 0 {
@@ -444,9 +438,9 @@ impl TerminalEditor {
                 height: 1,
             };
             if row == BASICS_ROW {
-                form::section_rule(frame, row_area, "basics", palette);
+                form::section_rule(frame, row_area, "basics", ui);
             } else if row == ANSI_ROW {
-                form::section_rule(frame, row_area, "ansi palette", palette);
+                form::section_rule(frame, row_area, "ansi palette", ui);
             } else {
                 let index = Self::index_at(row);
                 let label = ColorField::ALL[index].label();
@@ -456,20 +450,15 @@ impl TerminalEditor {
                     &label,
                     &mut self.fields[index],
                     self.focus == index,
-                    palette,
+                    ui,
                 );
             }
         }
     }
 
     /// Draw the live preview of the colours the fields currently describe.
-    fn render_preview(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
-        let block = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(" preview")
-            .title_alignment(Alignment::Left)
-            .border_style(Style::default().fg(chrome::accent(palette.dark)))
-            .style(Style::default().bg(palette.surface));
+    fn render_preview(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+        let block = pane(ui, " preview");
         let inner = block.inner(area);
         frame.render_widget(block, area);
         if inner.width == 0 || inner.height == 0 {
@@ -480,12 +469,16 @@ impl TerminalEditor {
             Line::from(Span::styled(
                 "live preview",
                 Style::default()
-                    .fg(palette.primary)
+                    .fg(ui.palette.primary)
                     .add_modifier(Modifier::BOLD),
             )),
             Line::from(""),
         ];
-        lines.extend(text::mock_session(&colors).into_iter().take(PREVIEW_LINES));
+        lines.extend(
+            text::mock_session(&colors, ui.glyphs)
+                .into_iter()
+                .take(PREVIEW_LINES),
+        );
         lines.push(Line::from(""));
         lines.extend(text::swatch_grid(&colors));
         lines.push(Line::from(""));

@@ -13,12 +13,11 @@ use termux_settings::fonts;
 use termux_settings::model::font_slot::FontSlot;
 use termux_settings::paths::Paths;
 use termux_settings::terminal;
+use termux_settings::ui::Glyphs;
 
 fn main() -> io::Result<()> {
     let args = Args::parse();
-    if args.ascii {
-        termux_settings::ui::ascii::set_ascii(true);
-    }
+    let glyphs = Glyphs::new(args.ascii);
     if args.version {
         println!("termux-settings {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
@@ -59,7 +58,7 @@ fn main() -> io::Result<()> {
     terminal::install_panic_hook();
     let _guard = terminal::Terminal::enter()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
-    let mut app = App::new(paths);
+    let mut app = App::with_glyphs(paths, glyphs);
 
     loop {
         app.tick(Instant::now());

@@ -5,18 +5,17 @@ use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
 
 use crate::chrome;
 use crate::library::{active_colors, active_theme_path};
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
 use crate::screens::{ScreenAction, ScreenKind};
-use crate::theme::Palette;
 use crate::ui::dialog::DialogResult;
 use crate::ui::focus::{Move, list_move};
-use crate::ui::glyphs;
 use crate::ui::text;
+use crate::ui::{Ui, pane};
 
 /// The menu entries, in display order.
 const ITEMS: [(&str, ScreenKind); 5] = [
@@ -109,29 +108,29 @@ impl MainMenu {
     }
 
     /// Draw the hero, status line and menu box.
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
                 Style::default()
-                    .bg(palette.background)
-                    .fg(palette.foreground),
+                    .bg(ui.palette.background)
+                    .fg(ui.palette.foreground),
             ),
             area,
         );
 
         let header = vec![
             Line::from("change terminal & app colours, live")
-                .style(Style::default().fg(palette.muted))
+                .style(Style::default().fg(ui.palette.muted))
                 .alignment(Alignment::Center),
             Line::from(""),
             text::palette_strip(&self.colors).alignment(Alignment::Center),
             Line::from(""),
             Line::from(vec![
-                Span::styled("active theme  ", Style::default().fg(palette.muted)),
+                Span::styled("active theme  ", Style::default().fg(ui.palette.muted)),
                 Span::styled(
                     self.active_label.clone(),
                     Style::default()
-                        .fg(palette.primary)
+                        .fg(ui.palette.primary)
                         .add_modifier(Modifier::BOLD),
                 ),
             ])
@@ -145,7 +144,7 @@ impl MainMenu {
         ])
         .areas(area);
         frame.render_widget(
-            Paragraph::new(header).style(Style::default().bg(palette.background)),
+            Paragraph::new(header).style(Style::default().bg(ui.palette.background)),
             header_area,
         );
 
@@ -160,17 +159,12 @@ impl MainMenu {
             .iter()
             .map(|(label, _)| ListItem::new(Line::from(format!("  {label}"))))
             .collect();
-        let block = Block::bordered()
-            .border_type(BorderType::Rounded)
-            .title(Line::from(" menu").alignment(Alignment::Left))
-            .border_style(Style::default().fg(chrome::accent(palette.dark)))
-            .style(Style::default().bg(palette.surface));
         let list = List::new(items)
-            .block(block)
-            .highlight_symbol(glyphs::marker())
+            .block(pane(ui, " menu"))
+            .highlight_symbol(ui.glyphs.marker())
             .highlight_style(
                 Style::default()
-                    .bg(chrome::accent(palette.dark))
+                    .bg(chrome::accent(ui.palette.dark))
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
             );

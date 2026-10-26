@@ -1,10 +1,10 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
-    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, List, ListItem, ListState, Paragraph},
+    widgets::{Block, List, ListItem, ListState, Paragraph},
 };
 
 use crate::app::Command;
@@ -13,10 +13,9 @@ use crate::fonts::{apply, prompt, scan};
 use crate::model::font_slot::FontSlot;
 use crate::paths::Paths;
 use crate::screens::ScreenAction;
-use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
-use crate::ui::glyphs;
 use crate::ui::input::Field;
+use crate::ui::{Ui, pane};
 
 #[derive(Clone, Debug)]
 pub struct FontsTab {
@@ -79,10 +78,7 @@ impl FontsTab {
             }
             KeyCode::Char('s') => {
                 self.slot = (self.slot + 1) % FontSlot::ALL.len();
-                ScreenAction::Status(format!(
-                    "Slot: {}",
-                    FontSlot::ALL[self.slot].as_str()
-                ))
+                ScreenAction::Status(format!("Slot: {}", FontSlot::ALL[self.slot].as_str()))
             }
             KeyCode::Char('p') | KeyCode::Char(' ') => {
                 if let Some(i) = self.state.selected() {
@@ -177,12 +173,12 @@ impl FontsTab {
         ]
     }
 
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
                 Style::default()
-                    .bg(palette.background)
-                    .fg(palette.foreground),
+                    .bg(ui.palette.background)
+                    .fg(ui.palette.foreground),
             ),
             area,
         );
@@ -201,26 +197,19 @@ impl FontsTab {
             .map(|l| ratatui::text::Line::from(l.as_str()))
             .collect();
         frame.render_widget(
-            Paragraph::new(preview).block(
-                Block::bordered()
-                    .border_type(BorderType::Rounded)
-                    .title(" Preview")
-                    .title_alignment(Alignment::Left)
-                    .border_style(Style::default().fg(chrome::accent(palette.dark)))
-                    .style(Style::default().bg(palette.surface)),
-            ),
+            Paragraph::new(preview).block(pane(ui, " Preview")),
             layout[0],
         );
         // slot info
-        let (open, close) = glyphs::chip();
+        let (open, close) = ui.glyphs.chip();
         let slot = FontSlot::ALL[self.slot].as_str();
         frame.render_widget(
             Paragraph::new(Line::from(vec![
-                Span::styled("slot  ", Style::default().fg(palette.muted)),
+                Span::styled("slot  ", Style::default().fg(ui.palette.muted)),
                 Span::styled(
                     format!("{open} {slot} {close}"),
                     Style::default()
-                        .fg(chrome::accent(palette.dark))
+                        .fg(chrome::accent(ui.palette.dark))
                         .add_modifier(Modifier::BOLD),
                 ),
             ])),
@@ -232,19 +221,13 @@ impl FontsTab {
             .iter()
             .map(|e| ListItem::new(format!("{} - {} {}", e.name, e.family, e.style)))
             .collect();
+        let title = format!(" Fonts ({})", self.entries.len());
         let list = List::new(items)
-            .block(
-                Block::bordered()
-                    .border_type(BorderType::Rounded)
-                    .title(format!(" Fonts ({})", self.entries.len()))
-                    .title_alignment(Alignment::Left)
-                    .border_style(Style::default().fg(chrome::accent(palette.dark)))
-                    .style(Style::default().bg(palette.surface)),
-            )
-            .highlight_symbol(glyphs::marker())
+            .block(pane(ui, &title))
+            .highlight_symbol(ui.glyphs.marker())
             .highlight_style(
                 Style::default()
-                    .bg(chrome::accent(palette.dark))
+                    .bg(chrome::accent(ui.palette.dark))
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
             );

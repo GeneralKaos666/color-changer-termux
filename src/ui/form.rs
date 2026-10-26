@@ -8,8 +8,8 @@ use ratatui::widgets::Paragraph;
 
 use crate::chrome;
 use crate::model::colors::Rgb;
-use crate::theme::Palette;
-use crate::ui::glyphs;
+use crate::ui::Ui;
+use crate::ui::glyphs::Glyphs;
 use crate::ui::input::Field;
 use crate::ui::text::swatch;
 
@@ -20,7 +20,7 @@ const LABEL_WIDTH: u16 = 26;
 const SWATCH_WIDTH: u16 = 3;
 
 /// Draw a section heading followed by a rule that fills the rest of the row.
-pub fn section_rule(frame: &mut Frame, area: Rect, title: &str, palette: &Palette) {
+pub fn section_rule(frame: &mut Frame, area: Rect, title: &str, ui: &Ui) {
     if area.width == 0 || area.height == 0 {
         return;
     }
@@ -30,7 +30,7 @@ pub fn section_rule(frame: &mut Frame, area: Rect, title: &str, palette: &Palett
     frame.render_widget(
         Paragraph::new(title.to_uppercase()).style(
             Style::default()
-                .fg(palette.secondary)
+                .fg(ui.palette.secondary)
                 .add_modifier(Modifier::BOLD),
         ),
         title_area,
@@ -38,11 +38,12 @@ pub fn section_rule(frame: &mut Frame, area: Rect, title: &str, palette: &Palett
     if rule_area.width > 0 {
         frame.render_widget(
             Paragraph::new(
-                glyphs::rule_char()
+                ui.glyphs
+                    .rule_char()
                     .to_string()
                     .repeat(rule_area.width as usize),
             )
-            .style(Style::default().fg(palette.muted)),
+            .style(Style::default().fg(ui.palette.muted)),
             rule_area,
         );
     }
@@ -58,7 +59,7 @@ pub fn field_row(
     label: &str,
     field: &mut Field,
     focused: bool,
-    palette: &Palette,
+    ui: &Ui,
 ) {
     if area.width == 0 || area.height == 0 {
         return;
@@ -68,12 +69,12 @@ pub fn field_row(
         Layout::horizontal([Constraint::Length(label_width), Constraint::Min(0)]).areas(area);
     let label_style = if focused {
         Style::default()
-            .fg(palette.primary)
+            .fg(ui.palette.primary)
             .add_modifier(Modifier::BOLD)
     } else {
-        Style::default().fg(palette.foreground)
+        Style::default().fg(ui.palette.foreground)
     };
-    let label = truncate(label, label_width as usize);
+    let label = truncate(label, label_width as usize, ui.glyphs);
     frame.render_widget(Paragraph::new(label).style(label_style), label_area);
     if rest.width == 0 {
         return;
@@ -94,13 +95,15 @@ pub fn field_row(
 
     let invalid = !field.value().trim().is_empty() && color.is_none();
     let style = if invalid {
-        Style::default().fg(palette.error).bg(palette.boost)
+        Style::default().fg(ui.palette.error).bg(ui.palette.boost)
     } else if focused {
         Style::default()
             .fg(Color::White)
-            .bg(chrome::accent(palette.dark))
+            .bg(chrome::accent(ui.palette.dark))
     } else {
-        Style::default().fg(palette.foreground).bg(palette.surface)
+        Style::default()
+            .fg(ui.palette.foreground)
+            .bg(ui.palette.surface)
     };
     field.set_width(input_area.width as usize);
     frame.render_widget(
@@ -112,11 +115,11 @@ pub fn field_row(
 }
 
 /// Truncate `text` to at most `width` cells, adding an ellipsis when it is cut.
-fn truncate(text: &str, width: usize) -> String {
+fn truncate(text: &str, width: usize, glyphs: Glyphs) -> String {
     if text.chars().count() <= width {
         return text.to_owned();
     }
-    let ellipsis = glyphs::ellipsis();
+    let ellipsis = glyphs.ellipsis();
     let ellipsis_width = ellipsis.chars().count();
     if width <= ellipsis_width {
         return ellipsis.chars().take(width).collect();
@@ -129,17 +132,14 @@ fn truncate(text: &str, width: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ui::ascii::set_ascii;
 
     #[test]
     fn truncate_uses_unicode_ellipsis_by_default() {
-        assert_eq!(truncate("abcdef", 4), "abc…");
+        assert_eq!(truncate("abcdef", 4, Glyphs::new(false)), "abc…");
     }
 
     #[test]
     fn truncate_uses_ascii_ellipsis_in_ascii_mode() {
-        set_ascii(true);
-        assert_eq!(truncate("abcdef", 5), "ab...");
-        set_ascii(false);
+        assert_eq!(truncate("abcdef", 5, Glyphs::new(true)), "ab...");
     }
 }

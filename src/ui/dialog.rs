@@ -5,10 +5,10 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Paragraph, Widget, Wrap};
+use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
 use crate::chrome;
-use crate::theme::Palette;
+use crate::ui::Ui;
 use crate::ui::input::Field;
 
 /// The outcome of a dialog.
@@ -123,7 +123,7 @@ impl Dialog {
     }
 
     /// Draw the dialog centred in `area` on top of whatever is already there.
-    pub fn render(&self, area: Rect, buf: &mut Buffer, palette: &Palette) {
+    pub fn render(&self, area: Rect, buf: &mut Buffer, ui: &Ui) {
         if area.width == 0 || area.height == 0 {
             return;
         }
@@ -135,19 +135,24 @@ impl Dialog {
             width,
             height,
         };
-        let block = Block::bordered()
-            .border_type(BorderType::Rounded)
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_set(ui.glyphs.border_set())
             .title(format!(" {}", self.title()))
             .title_alignment(Alignment::Left)
-            .border_style(Style::default().fg(chrome::accent(palette.dark)))
-            .style(Style::default().bg(palette.panel).fg(palette.foreground));
+            .border_style(Style::default().fg(chrome::accent(ui.palette.dark)))
+            .style(
+                Style::default()
+                    .bg(ui.palette.panel)
+                    .fg(ui.palette.foreground),
+            );
         let inner = block.inner(rect);
         block.render(rect, buf);
         if inner.width == 0 || inner.height == 0 {
             return;
         }
 
-        let message_style = Style::default().fg(palette.foreground);
+        let message_style = Style::default().fg(ui.palette.foreground);
         match self {
             Self::Confirm { message, hint, .. } => {
                 Paragraph::new(message.as_str())
@@ -161,7 +166,7 @@ impl Dialog {
                         ..inner
                     };
                     Paragraph::new(hint.as_str())
-                        .style(Style::default().fg(palette.muted))
+                        .style(Style::default().fg(ui.palette.muted))
                         .render(row, buf);
                 }
             }
@@ -188,12 +193,12 @@ impl Dialog {
                         width: inner.width.saturating_sub(2),
                         height: 1,
                     };
-                    render_field(field, placeholder, row, buf, palette);
+                    render_field(field, placeholder, row, buf, ui);
                 }
             }
         }
 
-        self.render_buttons(inner, buf, palette);
+        self.render_buttons(inner, buf, ui);
     }
 
     /// Rows the dialog body needs, excluding its borders.
@@ -231,7 +236,7 @@ impl Dialog {
     }
 
     /// Draw the right-aligned button row on the last inner row.
-    fn render_buttons(&self, inner: Rect, buf: &mut Buffer, palette: &Palette) {
+    fn render_buttons(&self, inner: Rect, buf: &mut Buffer, ui: &Ui) {
         if inner.height == 0 {
             return;
         }
@@ -243,11 +248,13 @@ impl Dialog {
             }
             let style = if focus == Some(index) {
                 Style::default()
-                    .bg(chrome::accent(palette.dark))
+                    .bg(chrome::accent(ui.palette.dark))
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD)
             } else {
-                Style::default().bg(palette.boost).fg(palette.foreground)
+                Style::default()
+                    .bg(ui.palette.boost)
+                    .fg(ui.palette.foreground)
             };
             spans.push(Span::styled(format!(" {label} "), style));
         }
@@ -263,7 +270,7 @@ impl Dialog {
 }
 
 /// Draw the prompt's text, its placeholder and a cursor block.
-fn render_field(field: &Field, placeholder: &str, row: Rect, buf: &mut Buffer, palette: &Palette) {
+fn render_field(field: &Field, placeholder: &str, row: Rect, buf: &mut Buffer, ui: &Ui) {
     let width = row.width as usize;
     if width == 0 {
         return;
@@ -275,11 +282,11 @@ fn render_field(field: &Field, placeholder: &str, row: Rect, buf: &mut Buffer, p
             row.x,
             row.y,
             placeholder,
-            Style::default().fg(palette.muted),
+            Style::default().fg(ui.palette.muted),
         );
     }
     let visible: String = value.chars().skip(offset).take(width).collect();
-    let style = Style::default().fg(palette.foreground);
+    let style = Style::default().fg(ui.palette.foreground);
     buf.set_string(row.x, row.y, &visible, style);
 
     let cursor = field.input.visual_cursor().saturating_sub(offset);
