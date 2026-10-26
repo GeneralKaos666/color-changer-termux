@@ -1,4 +1,5 @@
 pub mod app;
+pub mod chrome;
 pub mod cli;
 pub mod error;
 pub mod fonts;
