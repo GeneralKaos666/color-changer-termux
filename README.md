@@ -61,7 +61,7 @@ bottom.
 mkdir -p "$PREFIX/etc/apt/keyrings"
 curl -fsSL https://generalkaos666.github.io/termux-apt-repo/key.gpg \
   -o "$PREFIX/etc/apt/keyrings/termux-apt-repo.gpg"
-echo "deb [signed-by=$PREFIX/etc/apt/keyrings/termux-apt-repo.gpg] https://generalkaos666.github.io/termux-apt-repo termux main" \
+echo "deb [signed-by=$PREFIX/etc/apt/keyrings/termux-apt-repo.gpg] https://generalkaos666.github.io/termux-apt-repo stable main" \
   > "$PREFIX/etc/apt/sources.list.d/termux-apt-repo.list"
 pkg update && pkg install termux-settings
 termux-settings
