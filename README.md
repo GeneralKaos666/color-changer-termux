@@ -5,6 +5,11 @@ terminal colours, your Termux app theme, and your fonts.
 
 ```
 termux-settings
+change terminal & app colours, live
+
+▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮▮
+active theme  default
+
 ╭─ menu ──────────────────────╮
 │ ▶ Preset Themes             │
 │   Terminal Colors           │
@@ -15,21 +20,28 @@ termux-settings
 ↑/↓ move · Enter open · Esc quit · Ctrl+C quit
 ```
 
+The title is a fixed lavender→indigo gradient, pane borders and highlights use
+a violet accent, and every screen shows a context-sensitive help bar along the
+bottom.
+
 ## Features
 
-- **Themes itself from your palette** — the TUI re-colours itself to match the
+- **Themes itself from your palette**: the TUI re-colours itself to match the
   active terminal theme, and updates live as you highlight presets.
-- **Preset Themes** — browses the themes in `~/.termux/colors/` (the same
+- **Preset Themes**: browses the themes in `~/.termux/colors/` (the same
   library used by `colors.sh`), with a filter box, a mock shell session
   rendered in each theme, a swatch grid, and a colour strip. Activating a theme
   points `~/.termux/colors.properties` at it and runs `termux-reload-settings`.
-- **Terminal Colors** — edits background, foreground, cursor and the 16 ANSI
+- **Terminal Colors**: edits background, foreground, cursor and the 16 ANSI
   colours with inline swatches, live validation and a live preview. Save in
   place or `Save As...` a new theme.
-- **App Theme** — edits a safe subset of `~/.termux/termux.properties`
+- **App Theme**: edits a safe subset of `~/.termux/termux.properties`
   (`use-black-ui`, cursor style, margins, transcript rows, etc.) in sectioned
   groups, without touching anything it does not manage.
-- **Safe by default** — before overwriting an existing config it asks whether
+- **Fonts**: browses the fonts in `~/.termux/fonts/`, previews each one against
+  a real shell prompt, and applies it to a slot (`regular`, `bold`, `italic`,
+  `bold-italic`); can also import files and download Nerd Fonts.
+- **Safe by default**: before overwriting an existing config it asks whether
   to write a timestamped backup to `~/.termux/backups/`.
 
 ## Requirements
@@ -102,21 +114,47 @@ upgrade.
 termux-settings
 ```
 
+Every screen shows a context-sensitive help bar along the bottom with its exact
+keys. The common ones:
+
 | Key | Action |
 | --- | --- |
-| `Tab` / `Shift+Tab` | next / previous focus region |
-| `Up` / `Down`, `j` / `k` | move inside a list or form |
+| `↑` / `↓` (or `j` / `k`) | move the selection, or previous/next field |
+| `←` / `→` | cycle a selector's choices (App Theme) |
+| `Tab` / `Shift+Tab` | next / previous focus region or field |
 | `Home` / `End` | first / last item |
 | `PageUp` / `PageDown` | jump ten items |
-| `Enter` | activate the focused button or item |
+| `Enter` | activate the focused item or button |
 | `Esc` | go back; quits from the main menu |
 | `Ctrl+C` / `Ctrl+Q` | quit from anywhere, including dialogs |
 | `Ctrl+S` | save (editors) |
 | `Ctrl+A` | save as a new theme (Terminal Colors) |
 | `Ctrl+R` | revert unsaved edits (editors) |
 | `r` | reload the theme library (Preset Themes) |
+| `p` / `Space` | preview the selected font (Fonts) |
+| `s` | cycle the font slot (Fonts) |
+| `i` | import fonts (Fonts) |
+| `d` | download a Nerd Font (Fonts) |
+| `/` | toggle the font filter (Fonts) |
 
-In Preset Themes, focus the filter box and type to search the library.
+In Preset Themes, `Tab` focuses the filter box; type to search the library. In
+Fonts, `/` toggles the same kind of filter.
+
+### Command line
+
+```sh
+termux-settings                            # launch the TUI
+termux-settings --list-fonts               # list fonts in ~/.termux/fonts/
+termux-settings --apply-font FiraCode       # install a font to a slot
+termux-settings --apply-font FiraCode --slot bold
+termux-settings --version                  # print the version
+termux-settings --ascii                    # plain-ASCII glyphs
+```
+
+`--slot` takes `regular`, `bold`, `italic`, or `bold-italic` (default
+`regular`). `--ascii` (or `TERMUX_SETTINGS_ASCII=1`) swaps the Unicode glyphs for
+plain-ASCII equivalents; the legacy `TERMUX_COLORS_ASCII` and `FONT_CHANGER_ASCII`
+variables are still honoured.
 
 ## Relationship to `colors.sh`
 
