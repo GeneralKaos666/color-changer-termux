@@ -298,7 +298,7 @@ impl AppThemeEditor {
         }
     }
 
-    /// Draw the form and the action row.
+    /// Draw the form.
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         frame.render_widget(
             Block::default().style(

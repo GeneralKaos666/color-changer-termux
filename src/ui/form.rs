@@ -116,10 +116,30 @@ fn truncate(text: &str, width: usize) -> String {
     if text.chars().count() <= width {
         return text.to_owned();
     }
-    if width == 0 {
-        return String::new();
+    let ellipsis = glyphs::ellipsis();
+    let ellipsis_width = ellipsis.chars().count();
+    if width <= ellipsis_width {
+        return ellipsis.chars().take(width).collect();
     }
-    let mut out: String = text.chars().take(width - 1).collect();
-    out.push('…');
+    let mut out: String = text.chars().take(width - ellipsis_width).collect();
+    out.push_str(ellipsis);
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ui::ascii::set_ascii;
+
+    #[test]
+    fn truncate_uses_unicode_ellipsis_by_default() {
+        assert_eq!(truncate("abcdef", 4), "abc…");
+    }
+
+    #[test]
+    fn truncate_uses_ascii_ellipsis_in_ascii_mode() {
+        set_ascii(true);
+        assert_eq!(truncate("abcdef", 5), "ab...");
+        set_ascii(false);
+    }
 }

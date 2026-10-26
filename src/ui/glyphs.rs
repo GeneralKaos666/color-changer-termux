@@ -41,6 +41,11 @@ pub fn breadcrumb() -> &'static str {
     if is_ascii() { ">" } else { "›" }
 }
 
+/// The success tick used in mock shell output (`✓ ` / `v `).
+pub fn tick() -> &'static str {
+    if is_ascii() { "v " } else { "✓ " }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -56,6 +61,7 @@ mod tests {
         assert_eq!(ellipsis(), "…");
         assert_eq!(filter(), "⌕ ");
         assert_eq!(breadcrumb(), "›");
+        assert_eq!(tick(), "✓ ");
         set_ascii(true);
         assert_eq!(marker(), "> ");
         assert_eq!(rule_char(), '-');
@@ -64,6 +70,7 @@ mod tests {
         assert_eq!(ellipsis(), "...");
         assert_eq!(filter(), "? ");
         assert_eq!(breadcrumb(), ">");
+        assert_eq!(tick(), "v ");
         set_ascii(false);
     }
 }

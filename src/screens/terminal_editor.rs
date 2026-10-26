@@ -402,7 +402,7 @@ impl TerminalEditor {
         }
     }
 
-    /// Draw the form, the preview and the action row.
+    /// Draw the form and the preview.
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         frame.render_widget(
             Block::default().style(

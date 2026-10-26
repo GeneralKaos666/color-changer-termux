@@ -29,6 +29,8 @@ fn menu_still_renders_at_the_minimum_size() {
     let mut app = App::new(Paths::new(dir.path()));
     let rendered = render_text(&mut app, 40, 10);
     assert!(rendered.contains("termux-settings"));
+    assert!(rendered.contains("Preset Themes"));
+    assert!(rendered.contains("Quit"));
 }
 
 #[test]

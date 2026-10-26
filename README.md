@@ -5,13 +5,13 @@ terminal colours, your Termux app theme, and your fonts.
 
 ```
 termux-settings
-┌─ menu ──────────────────────┐
+╭─ menu ──────────────────────╮
 │ ▶ Preset Themes             │
 │   Terminal Colors           │
 │   App Theme                 │
 │   Fonts                     │
 │   Quit                      │
-└─────────────────────────────┘
+╰─────────────────────────────╯
 ↑/↓ move · Enter open · Esc quit · Ctrl+C quit
 ```
 

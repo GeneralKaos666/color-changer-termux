@@ -9,6 +9,7 @@ use ratatui::text::{Line, Span};
 
 use crate::model::colors::{Rgb, TerminalColors};
 use crate::theme::{ensure_contrast, relative_luminance};
+use crate::ui::glyphs;
 
 /// Return black or white, whichever reads better on `color`.
 ///
@@ -128,7 +129,7 @@ pub fn mock_session(colors: &TerminalColors) -> Vec<Line<'static>> {
 
     let tests = Line::from(vec![
         Span::raw("  "),
-        bold("✓ ", ink(2)),
+        bold(glyphs::tick(), ink(2)),
         plain("31 passed", ink(2)),
         plain(" in 2.5s", colors.foreground),
     ]);
