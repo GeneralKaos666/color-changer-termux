@@ -8,7 +8,7 @@ use std::fmt;
 use crate::error::Error;
 
 /// One of the four Termux font files.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum FontSlot {
     /// `font.ttf`.
     Regular,

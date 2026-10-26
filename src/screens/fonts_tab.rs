@@ -99,14 +99,14 @@ impl FontsTab {
                 ScreenAction::None
             }
             KeyCode::Enter => {
-                if self.session.dirty {
-                    let _ = apply::commit_preview(&mut self.session);
+                if apply::is_dirty(&self.session) {
+                    let _ = apply::commit_preview(paths, &mut self.session);
                     return ScreenAction::Status("Font applied".to_string());
                 }
                 ScreenAction::None
             }
             KeyCode::Esc => {
-                if self.session.dirty {
+                if apply::is_dirty(&self.session) {
                     let _ = apply::restore_original(paths, &mut self.session);
                     return ScreenAction::Status("Restored original font".to_string());
                 }
@@ -152,6 +152,14 @@ impl FontsTab {
         ScreenAction::None
     }
     pub fn on_dialog(&mut self, _result: DialogResult, _paths: &Paths) -> ScreenAction {
+        ScreenAction::None
+    }
+
+    /// Restore any uncommitted preview before the application quits.
+    pub fn on_quit(&mut self, paths: &Paths) -> ScreenAction {
+        if apply::is_dirty(&self.session) {
+            let _ = apply::restore_original(paths, &mut self.session);
+        }
         ScreenAction::None
     }
 

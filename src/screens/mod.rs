@@ -151,6 +151,14 @@ impl Screen {
         }
     }
 
+    /// Restore any uncommitted state before the application quits.
+    pub fn on_quit(&mut self, paths: &Paths) -> ScreenAction {
+        match self {
+            Self::FontsTab(screen) => screen.on_quit(paths),
+            _ => ScreenAction::None,
+        }
+    }
+
     /// Draw the screen into `area`.
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         match self {

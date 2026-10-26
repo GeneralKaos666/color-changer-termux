@@ -207,3 +207,87 @@ pub fn editor_mut(app: &mut App) -> &mut TerminalEditor {
         _ => panic!("the editor is not the current screen"),
     }
 }
+
+/// Open the Fonts tab from the main menu.
+pub fn open_fonts(app: &mut App) {
+    app.handle_key(key(KeyCode::Down)); // Preset -> Terminal
+    app.handle_key(key(KeyCode::Down)); // Terminal -> App Theme
+    app.handle_key(key(KeyCode::Down)); // App Theme -> Fonts
+    app.handle_key(key(KeyCode::Enter));
+}
+
+/// A minimal but valid TrueType font (156 bytes) that `ttf_parser` accepts.
+pub fn minimal_ttf() -> Vec<u8> {
+    fn u32(v: u32) -> [u8; 4] {
+        v.to_be_bytes()
+    }
+    fn u16(v: u16) -> [u8; 2] {
+        v.to_be_bytes()
+    }
+    fn i16(v: i16) -> [u8; 2] {
+        v.to_be_bytes()
+    }
+
+    let mut head = Vec::new();
+    head.extend(u32(0x00010000));
+    head.extend(u32(0x00010000));
+    head.extend(u32(0));
+    head.extend(u32(0x5F0F3CF5));
+    head.extend(u16(0));
+    head.extend(u16(1000));
+    head.extend(u64::to_be_bytes(0));
+    head.extend(u64::to_be_bytes(0));
+    head.extend(i16(0));
+    head.extend(i16(0));
+    head.extend(i16(1000));
+    head.extend(i16(1000));
+    head.extend(u16(0));
+    head.extend(u16(8));
+    head.extend(i16(2));
+    head.extend(i16(0));
+    head.extend(i16(0));
+
+    let mut hhea = Vec::new();
+    hhea.extend(u32(0x00010000));
+    hhea.extend(i16(800));
+    hhea.extend(i16(-200));
+    hhea.extend(i16(0));
+    hhea.extend(u16(1000));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(1000));
+    hhea.extend(i16(1));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(u16(1));
+
+    let mut maxp = Vec::new();
+    maxp.extend(u32(0x00005000));
+    maxp.extend(u16(1));
+
+    let tables: Vec<(&[u8; 4], Vec<u8>)> = vec![(b"head", head), (b"hhea", hhea), (b"maxp", maxp)];
+
+    let mut d = Vec::new();
+    d.extend(u32(0x00010000));
+    d.extend(u16(3));
+    d.extend(u16(0));
+    d.extend(u16(0));
+    d.extend(u16(0));
+    let mut offset = 12 + 16 * 3;
+    for (tag, data) in &tables {
+        d.extend_from_slice(*tag);
+        d.extend(u32(0));
+        d.extend(u32(offset as u32));
+        d.extend(u32(data.len() as u32));
+        offset += data.len();
+    }
+    for (_, data) in &tables {
+        d.extend_from_slice(data);
+    }
+    d
+}

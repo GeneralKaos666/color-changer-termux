@@ -71,15 +71,17 @@ impl App {
 
     /// Handle a key press from the event loop.
     pub fn handle_key(&mut self, key: KeyEvent) {
-        if key.modifiers.contains(KeyModifiers::CONTROL)
-            && matches!(key.code, KeyCode::Char('c') | KeyCode::Char('q'))
-        {
-            self.quit = true;
+        let quit_chord = key.modifiers.contains(KeyModifiers::CONTROL)
+            && matches!(key.code, KeyCode::Char('c') | KeyCode::Char('q'));
+        let quit_plain = !key.modifiers.contains(KeyModifiers::CONTROL)
+            && key.code == KeyCode::Char('q');
+        if quit_chord || quit_plain {
+            self.request_quit();
             return;
         }
         if self.too_small {
             if key.code == KeyCode::Esc {
-                self.quit = true;
+                self.request_quit();
             }
             return;
         }
@@ -272,6 +274,15 @@ impl App {
         self.quit
     }
 
+    /// Restore every screen's uncommitted state, then mark the app as quitting.
+    pub fn request_quit(&mut self) {
+        let paths = self.paths.clone();
+        for screen in &mut self.screens {
+            screen.on_quit(&paths);
+        }
+        self.quit = true;
+    }
+
     /// Show `message` in the status line for [`STATUS_TTL`].
     pub fn set_status(&mut self, message: &str) {
         self.status = Some((message.to_owned(), Instant::now()));
@@ -281,7 +292,7 @@ impl App {
     fn apply(&mut self, action: ScreenAction) {
         match action {
             ScreenAction::None => {}
-            ScreenAction::Quit => self.quit = true,
+            ScreenAction::Quit => self.request_quit(),
             ScreenAction::Push(kind) => {
                 if let Some(mut screen) = Screen::new(kind, &self.paths) {
                     let action = screen.opened(&self.paths);
