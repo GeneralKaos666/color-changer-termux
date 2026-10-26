@@ -108,7 +108,7 @@ impl MainMenu {
     }
 
     /// Draw the hero, status line and menu box.
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+    pub fn render(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
                 Style::default()
@@ -168,7 +168,8 @@ impl MainMenu {
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
             );
-        frame.render_stateful_widget(list, menu_rect, &mut self.list);
+        let mut list_state = self.list.clone();
+        frame.render_stateful_widget(list, menu_rect, &mut list_state);
     }
 }
 

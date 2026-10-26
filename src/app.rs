@@ -7,7 +7,7 @@ use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::Span;
-use ratatui::widgets::{Block, Paragraph};
+use ratatui::widgets::{Block, Clear, Paragraph};
 
 use crate::chrome;
 use crate::library::active_colors;
@@ -150,14 +150,13 @@ impl App {
     }
 
     /// Draw the current screen and, when set, the status line.
-    pub fn render(&mut self, frame: &mut Frame) {
+    pub fn render(&self, frame: &mut Frame) {
         let area = if self.area.width > 0 && self.area.height > 0 {
             self.area
         } else {
             frame.area()
         };
-        self.too_small = area.width < MIN_WIDTH || area.height < MIN_HEIGHT;
-        if self.too_small {
+        if area.width < MIN_WIDTH || area.height < MIN_HEIGHT {
             self.render_too_small(frame, area);
             return;
         }
@@ -172,13 +171,13 @@ impl App {
         ])
         .areas(area);
         self.render_header(frame, header_area, &ui);
-        if let Some(screen) = self.screens.last_mut() {
+        if let Some(screen) = self.screens.last() {
             screen.render(frame, content_area, &ui);
         }
         self.render_footer(frame, footer_area, &ui);
         if let Some(dialog) = &self.dialog {
-            let buffer = frame.buffer_mut();
-            dialog.render(area, buffer, &ui);
+            frame.render_widget(Clear, area);
+            frame.render_widget(dialog.widget(&ui), area);
         }
     }
 
@@ -260,8 +259,18 @@ impl App {
     /// Record the terminal size and let the current screen re-derive geometry.
     pub fn set_area(&mut self, area: Rect) {
         self.area = area;
+        self.too_small = area.width < MIN_WIDTH || area.height < MIN_HEIGHT;
+        if self.too_small {
+            return;
+        }
+        let [_header, content, _footer] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ])
+        .areas(area);
         if let Some(screen) = self.screens.last_mut() {
-            screen.on_resize(area);
+            screen.on_resize(content);
         }
     }
 

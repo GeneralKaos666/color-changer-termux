@@ -8,7 +8,9 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{
+    Block, List, ListItem, ListState, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
+};
 
 use crate::chrome;
 use crate::library::{ThemeRef, active_theme_path, apply_theme, reload_termux, scan_themes};
@@ -76,7 +78,7 @@ impl PresetPicker {
         } else {
             ListState::default().with_selected(Some(0))
         };
-        Self {
+        let mut picker = Self {
             active: active_theme_path(&paths.colors_properties()),
             all,
             visible,
@@ -86,7 +88,9 @@ impl PresetPicker {
             canon: HashMap::new(),
             paths: paths.clone(),
             focus: Focus::List,
-        }
+        };
+        picker.fill_cache();
+        picker
     }
 
     /// The theme under the highlighted row.
@@ -100,21 +104,39 @@ impl PresetPicker {
         self.list.selected().filter(|row| *row < self.visible.len())
     }
 
+    /// Read every theme's colours and canonical path once, up front, so the
+    /// draw path never touches the filesystem.
+    fn fill_cache(&mut self) {
+        for theme in &self.all {
+            self.cache
+                .entry(theme.path.clone())
+                .or_insert_with(|| read_colors(&theme.path).unwrap_or_default());
+            self.canon.entry(theme.path.clone()).or_insert_with(|| {
+                std::fs::canonicalize(&theme.path).unwrap_or_else(|_| theme.path.clone())
+            });
+        }
+    }
+
     /// The colours of the theme at `row`, read once and cached.
     ///
     /// Unreadable or malformed themes fall back to the default colours so the
     /// preview keeps working.
-    pub fn colors_for(&mut self, row: usize) -> TerminalColors {
+    pub fn colors_for(&self, row: usize) -> TerminalColors {
         let Some(theme) = self.visible.get(row).and_then(|&index| self.all.get(index)) else {
             return TerminalColors::default();
         };
-        let path = theme.path.clone();
-        if let Some(colors) = self.cache.get(&path) {
-            return colors.clone();
-        }
-        let colors = read_colors(&path).unwrap_or_default();
-        self.cache.insert(path, colors.clone());
-        colors
+        self.cache.get(&theme.path).cloned().unwrap_or_default()
+    }
+
+    /// The active theme's library-relative name, or `default`.
+    fn active_label(&self) -> String {
+        let Some(active) = &self.active else {
+            return "default".to_owned();
+        };
+        active
+            .strip_prefix(self.paths.colors_root())
+            .map(|rel| rel.with_extension("").to_string_lossy().into_owned())
+            .unwrap_or_else(|_| "default".to_owned())
     }
 
     /// Keep only the themes whose label contains `needle`, ignoring case.
@@ -237,6 +259,7 @@ impl PresetPicker {
         self.all = load_themes(&self.paths);
         self.cache.clear();
         self.canon.clear();
+        self.fill_cache();
         let needle = self.filter.value().to_owned();
         self.visible = (0..self.all.len()).collect();
         self.apply_filter(&needle);
@@ -275,21 +298,8 @@ impl PresetPicker {
             .is_some_and(|active| self.canon.get(&theme.path) == Some(active))
     }
 
-    /// Memoize the canonical path of every visible theme so [`Self::is_active`]
-    /// does not touch the filesystem on every frame.
-    fn memoize_canonical(&mut self) {
-        for &index in &self.visible {
-            let Some(theme) = self.all.get(index) else {
-                continue;
-            };
-            self.canon.entry(theme.path.clone()).or_insert_with(|| {
-                std::fs::canonicalize(&theme.path).unwrap_or_else(|_| theme.path.clone())
-            });
-        }
-    }
-
     /// Draw the filter, the theme list and the preview.
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+    pub fn render(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
                 Style::default()
@@ -298,7 +308,6 @@ impl PresetPicker {
             ),
             area,
         );
-        self.memoize_canonical();
         let [list_area, preview_area] =
             Layout::horizontal([Constraint::Percentage(42), Constraint::Percentage(58)])
                 .spacing(1)
@@ -308,8 +317,12 @@ impl PresetPicker {
     }
 
     /// Draw the bordered filter-plus-list pane.
-    fn render_list(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
-        let title = format!(" themes ({})", self.visible.len());
+    fn render_list(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
+        let title = format!(
+            " themes ({}) · active: {}",
+            self.visible.len(),
+            self.active_label()
+        );
         let block = pane(ui, &title);
         let inner = block.inner(area);
         frame.render_widget(block, area);
@@ -319,7 +332,6 @@ impl PresetPicker {
         let [filter_area, list_area] =
             Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).areas(inner);
 
-        self.filter.set_width(filter_area.width as usize);
         let filter_style = if self.focus == Focus::Filter {
             Style::default()
                 .bg(ui.palette.boost)
@@ -365,11 +377,24 @@ impl PresetPicker {
                     .add_modifier(Modifier::BOLD),
             )
             .style(Style::default().bg(ui.palette.surface));
-        frame.render_stateful_widget(list, list_area, &mut self.list);
+
+        let list_rows = list_area.height as usize;
+        if self.visible.len() > list_rows {
+            let mut scroll = ScrollbarState::new(self.visible.len())
+                .position(self.list.selected().unwrap_or(0).min(self.visible.len()));
+            frame.render_stateful_widget(
+                Scrollbar::default().orientation(ScrollbarOrientation::VerticalRight),
+                list_area,
+                &mut scroll,
+            );
+        }
+
+        let mut list_state = self.list.clone();
+        frame.render_stateful_widget(list, list_area, &mut list_state);
     }
 
     /// Draw the preview pane for the highlighted theme.
-    fn render_preview(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+    fn render_preview(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         let block = pane(ui, " preview");
         let inner = block.inner(area);
         frame.render_widget(block, area);

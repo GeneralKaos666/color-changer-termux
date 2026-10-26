@@ -54,3 +54,15 @@ fn app_draws_and_closes_dialogs() {
     app.handle_key(key(KeyCode::Esc));
     assert!(app.dialog().is_none());
 }
+
+#[test]
+fn multiline_confirm_renders_every_line() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = App::new(Paths::new(dir.path()));
+    let long = "This is a fairly long message that should wrap across multiple lines instead of being clipped to a single row of the dialog box";
+    app.open_dialog(Dialog::confirm(long, "Yes", "No"));
+    let rendered = render_text(&mut app, 100, 30);
+    for word in long.split_whitespace() {
+        assert!(rendered.contains(word), "missing word: {word}");
+    }
+}

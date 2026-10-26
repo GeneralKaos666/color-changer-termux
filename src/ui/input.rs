@@ -8,8 +8,6 @@ use tui_input::{Input, InputRequest};
 pub struct Field {
     /// The underlying buffer and cursor.
     pub input: Input,
-    /// The width last used to render the field, for scroll calculations.
-    width: usize,
 }
 
 impl Field {
@@ -17,7 +15,6 @@ impl Field {
     pub fn new(value: &str) -> Self {
         Self {
             input: Input::new(value.to_owned()),
-            width: 0,
         }
     }
 
@@ -31,14 +28,10 @@ impl Field {
         self.input = Input::new(value.to_owned());
     }
 
-    /// Record the width the field is drawn at.
-    pub fn set_width(&mut self, width: usize) {
-        self.width = width;
-    }
-
-    /// The horizontal scroll offset needed to keep the cursor visible.
-    pub fn display_offset(&self) -> usize {
-        self.input.visual_scroll(self.width.max(1))
+    /// The horizontal scroll offset needed to keep the cursor visible when the
+    /// field is drawn `width` cells wide.
+    pub fn display_offset(&self, width: usize) -> usize {
+        self.input.visual_scroll(width.max(1))
     }
 
     /// Apply `key` to the field, returning whether it was consumed.

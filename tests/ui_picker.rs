@@ -7,6 +7,40 @@ use termux_settings::screens::preset_picker::load_themes;
 use termux_settings::ui::focus::{Move, list_move};
 
 #[test]
+fn header_shows_active_theme_label() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = Paths::new(dir.path());
+    std::fs::create_dir_all(paths.colors_root().join("dark")).unwrap();
+    let theme = paths.colors_root().join("dark/T.properties");
+    std::fs::write(&theme, "background=#000000\n").unwrap();
+    std::os::unix::fs::symlink(&theme, paths.colors_properties()).unwrap();
+
+    let mut app = App::new(paths);
+    open_picker(&mut app);
+    let rendered = render_text(&mut app, 100, 30);
+    assert!(rendered.contains("dark/T"));
+}
+
+#[test]
+fn scrollbar_appears_when_list_overflows() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = Paths::new(dir.path());
+    std::fs::create_dir_all(paths.colors_root()).unwrap();
+    for i in 0..40 {
+        std::fs::write(
+            paths.colors_root().join(format!("theme{i:02}.properties")),
+            "background=#000000\n",
+        )
+        .unwrap();
+    }
+
+    let mut app = App::new(paths);
+    open_picker(&mut app);
+    let rendered = render_text(&mut app, 100, 20);
+    assert!(rendered.contains('█'), "expected a scrollbar thumb");
+}
+
+#[test]
 fn empty_library_is_seeded_with_builtins() {
     let dir = tempfile::tempdir().unwrap();
     let paths = Paths::new(dir.path());

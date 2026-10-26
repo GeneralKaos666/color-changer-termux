@@ -48,6 +48,27 @@ pub enum Dialog {
 /// The most columns a dialog ever occupies.
 const MAX_WIDTH: u16 = 64;
 
+/// The number of lines `text` wraps to at `width` cells, packing words greedily.
+fn wrapped_lines(text: &str, width: usize) -> usize {
+    if width == 0 {
+        return 1;
+    }
+    let mut lines = 1;
+    let mut line_len = 0;
+    for word in text.split_whitespace() {
+        let word_len = word.chars().count();
+        if line_len == 0 {
+            line_len = word_len;
+        } else if line_len + 1 + word_len <= width {
+            line_len += 1 + word_len;
+        } else {
+            lines += 1;
+            line_len = word_len;
+        }
+    }
+    lines
+}
+
 impl Dialog {
     /// A yes/no question with `confirm_label` and `cancel_label` buttons.
     pub fn confirm(message: &str, confirm_label: &str, cancel_label: &str) -> Self {
@@ -90,6 +111,11 @@ impl Dialog {
         self
     }
 
+    /// A [`Widget`] wrapper that carries the [`Ui`] context.
+    pub fn widget<'a>(&'a self, ui: &'a Ui) -> DialogWidget<'a> {
+        DialogWidget { dialog: self, ui }
+    }
+
     /// Handle a key press, returning a result once the dialog is finished.
     pub fn handle_key(&mut self, key: KeyEvent) -> Option<DialogResult> {
         match self {
@@ -128,7 +154,7 @@ impl Dialog {
             return;
         }
         let width = (area.width * 9 / 10).min(MAX_WIDTH).clamp(1, area.width);
-        let height = (self.height() + 2).min(area.height);
+        let height = (self.height(width) + 2).min(area.height);
         let rect = Rect {
             x: area.x + area.width.saturating_sub(width) / 2,
             y: area.y + area.height.saturating_sub(height) / 2,
@@ -152,16 +178,23 @@ impl Dialog {
             return;
         }
 
+        let body = self.body_height(inner.width);
+        let message_rect = Rect {
+            x: inner.x,
+            y: inner.y,
+            width: inner.width,
+            height: body,
+        };
         let message_style = Style::default().fg(ui.palette.foreground);
         match self {
             Self::Confirm { message, hint, .. } => {
                 Paragraph::new(message.as_str())
                     .style(message_style)
                     .wrap(Wrap { trim: true })
-                    .render(Rect { height: 1, ..inner }, buf);
-                if inner.height > 1 && !hint.is_empty() {
+                    .render(message_rect, buf);
+                if !hint.is_empty() {
                     let row = Rect {
-                        y: inner.y + inner.height - 2,
+                        y: inner.y + body,
                         height: 1,
                         ..inner
                     };
@@ -174,7 +207,7 @@ impl Dialog {
                 Paragraph::new(message.as_str())
                     .style(message_style)
                     .wrap(Wrap { trim: true })
-                    .render(Rect { height: 1, ..inner }, buf);
+                    .render(message_rect, buf);
             }
             Self::Prompt {
                 message,
@@ -185,11 +218,11 @@ impl Dialog {
                 Paragraph::new(message.as_str())
                     .style(message_style)
                     .wrap(Wrap { trim: true })
-                    .render(Rect { height: 1, ..inner }, buf);
-                if inner.height > 2 {
+                    .render(message_rect, buf);
+                if inner.height > body + 1 {
                     let row = Rect {
                         x: inner.x + 1,
-                        y: inner.y + 2,
+                        y: inner.y + body + 1,
                         width: inner.width.saturating_sub(2),
                         height: 1,
                     };
@@ -201,11 +234,27 @@ impl Dialog {
         self.render_buttons(inner, buf, ui);
     }
 
+    /// Rows the wrapped message occupies at `width`.
+    fn body_height(&self, width: u16) -> u16 {
+        wrapped_lines(self.message_text(), width.saturating_sub(2) as usize).max(1) as u16
+    }
+
     /// Rows the dialog body needs, excluding its borders.
-    fn height(&self) -> u16 {
+    fn height(&self, width: u16) -> u16 {
+        let body = self.body_height(width);
         match self {
-            Self::Confirm { .. } | Self::Message { .. } => 3,
-            Self::Prompt { .. } => 5,
+            Self::Confirm { .. } => body + 2, // hint + buttons
+            Self::Message { .. } => body + 1, // buttons
+            Self::Prompt { .. } => body + 2,  // field + buttons
+        }
+    }
+
+    /// The dialog's message text.
+    fn message_text(&self) -> &str {
+        match self {
+            Self::Confirm { message, .. }
+            | Self::Message { message, .. }
+            | Self::Prompt { message, .. } => message,
         }
     }
 
@@ -266,6 +315,18 @@ impl Dialog {
         Paragraph::new(Line::from(spans))
             .alignment(Alignment::Right)
             .render(row, buf);
+    }
+}
+
+/// A [`Widget`] adapter that draws a [`Dialog`] with its [`Ui`] context.
+pub struct DialogWidget<'a> {
+    dialog: &'a Dialog,
+    ui: &'a Ui,
+}
+
+impl Widget for DialogWidget<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        self.dialog.render(area, buf, self.ui);
     }
 }
 

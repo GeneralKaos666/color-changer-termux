@@ -402,7 +402,7 @@ impl TerminalEditor {
     }
 
     /// Draw the form and the preview.
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+    pub fn render(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
                 Style::default()
@@ -419,16 +419,24 @@ impl TerminalEditor {
         self.render_preview(frame, preview_area, ui);
     }
 
+    /// Re-derive the visible row count after a resize.
+    pub fn on_resize(&mut self, area: Rect) {
+        let [form_area, _preview_area] =
+            Layout::horizontal([Constraint::Percentage(52), Constraint::Percentage(48)])
+                .spacing(1)
+                .areas(area);
+        self.visible_rows = form_area.height.saturating_sub(2) as usize;
+        self.scroll_to_focus();
+    }
+
     /// Draw the scrolling form of labelled fields.
-    fn render_form(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+    fn render_form(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         let block = pane(ui, " terminal colors");
         let inner = block.inner(area);
         frame.render_widget(block, area);
         if inner.width == 0 || inner.height == 0 {
             return;
         }
-        self.visible_rows = inner.height as usize;
-        self.scroll_to_focus();
         let end = (self.scroll + self.visible_rows).min(FORM_ROWS);
         for row in self.scroll..end {
             let row_area = Rect {
@@ -448,7 +456,7 @@ impl TerminalEditor {
                     frame,
                     row_area,
                     &label,
-                    &mut self.fields[index],
+                    &self.fields[index],
                     self.focus == index,
                     ui,
                 );
@@ -457,7 +465,7 @@ impl TerminalEditor {
     }
 
     /// Draw the live preview of the colours the fields currently describe.
-    fn render_preview(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+    fn render_preview(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         let block = pane(ui, " preview");
         let inner = block.inner(area);
         frame.render_widget(block, area);

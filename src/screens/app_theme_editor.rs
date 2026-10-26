@@ -298,7 +298,7 @@ impl AppThemeEditor {
     }
 
     /// Draw the form.
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+    pub fn render(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
                 Style::default()
@@ -310,16 +310,20 @@ impl AppThemeEditor {
         self.render_form(frame, area, ui);
     }
 
+    /// Re-derive the visible row count after a resize.
+    pub fn on_resize(&mut self, area: Rect) {
+        self.visible_rows = area.height.saturating_sub(2) as usize;
+        self.scroll_to_focus();
+    }
+
     /// Draw the scrolling form of section rules and labelled rows.
-    fn render_form(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+    fn render_form(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         let block = pane(ui, " app theme");
         let inner = block.inner(area);
         frame.render_widget(block, area);
         if inner.width == 0 || inner.height == 0 {
             return;
         }
-        self.visible_rows = inner.height as usize;
-        self.scroll_to_focus();
         let slots = slots();
         let end = (self.scroll + self.visible_rows).min(slots.len());
         for (row, slot) in slots.iter().enumerate().take(end).skip(self.scroll) {
@@ -338,13 +342,9 @@ impl AppThemeEditor {
                 Slot::Section(section) => {
                     form::section_rule(frame, row_area, section, ui);
                 }
-                Slot::Field(index) => render_row(
-                    frame,
-                    row_area,
-                    &mut self.rows[index],
-                    self.focus == index,
-                    ui,
-                ),
+                Slot::Field(index) => {
+                    render_row(frame, row_area, &self.rows[index], self.focus == index, ui)
+                }
             }
         }
     }
@@ -374,7 +374,7 @@ fn row_of(index: usize) -> usize {
 }
 
 /// Draw one row: label, a selector or text field, and the key name.
-fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, ui: &Ui) {
+fn render_row(frame: &mut Frame, area: Rect, row: &Row, focused: bool, ui: &Ui) {
     if area.width == 0 || area.height == 0 {
         return;
     }
@@ -431,11 +431,13 @@ fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, ui: &
             control_area,
         );
     } else {
-        row.field.set_width(control_area.width as usize);
         frame.render_widget(
             Paragraph::new(row.field.value())
                 .style(control_style)
-                .scroll((0, row.field.display_offset() as u16)),
+                .scroll((
+                    0,
+                    row.field.display_offset(control_area.width as usize) as u16,
+                )),
             control_area,
         );
     }

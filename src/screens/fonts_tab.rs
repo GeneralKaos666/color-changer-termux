@@ -189,7 +189,7 @@ impl FontsTab {
         ]
     }
 
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+    pub fn render(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
                 Style::default()
@@ -247,6 +247,7 @@ impl FontsTab {
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
             );
-        frame.render_stateful_widget(list, layout[2], &mut self.state);
+        let mut list_state = self.state.clone();
+        frame.render_stateful_widget(list, layout[2], &mut list_state);
     }
 }

@@ -57,7 +57,7 @@ pub fn field_row(
     frame: &mut Frame,
     area: Rect,
     label: &str,
-    field: &mut Field,
+    field: &Field,
     focused: bool,
     ui: &Ui,
 ) {
@@ -105,11 +105,10 @@ pub fn field_row(
             .fg(ui.palette.foreground)
             .bg(ui.palette.surface)
     };
-    field.set_width(input_area.width as usize);
     frame.render_widget(
         Paragraph::new(field.value())
             .style(style)
-            .scroll((0, field.display_offset() as u16)),
+            .scroll((0, field.display_offset(input_area.width as usize) as u16)),
         input_area,
     );
 }

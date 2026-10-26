@@ -161,7 +161,13 @@ impl Screen {
     }
 
     /// Re-derive geometry after a resize.
-    pub fn on_resize(&mut self, _area: Rect) {}
+    pub fn on_resize(&mut self, area: Rect) {
+        match self {
+            Self::Terminal(screen) => screen.on_resize(area),
+            Self::AppTheme(screen) => screen.on_resize(area),
+            _ => {}
+        }
+    }
 
     /// Handle a worker message, if this screen cares.
     pub fn on_msg(&mut self, msg: &Msg, paths: &Paths) -> ScreenAction {
@@ -172,7 +178,7 @@ impl Screen {
     }
 
     /// Draw the screen into `area`.
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, ui: &Ui) {
+    pub fn render(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         match self {
             Self::Main(screen) => screen.render(frame, area, ui),
             Self::Presets(screen) => screen.render(frame, area, ui),
