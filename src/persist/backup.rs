@@ -53,10 +53,46 @@ pub fn format_timestamp(at: OffsetDateTime, offset: Option<UtcOffset>) -> String
 /// local offset cannot be determined the time falls back to UTC and
 /// [`Backup::utc_fallback`] is set.
 pub fn make_backup(source: &Path, backups_dir: &Path, prefix: &str) -> Result<Option<Backup>> {
+    make_unique_backup(source, backups_dir, prefix, ".properties")
+}
+
+/// Whether `name` is `<stem>-<YYYY-MM-DD-HHMMSS><ext>`.
+///
+/// The stamp is exactly 17 characters with dashes at offsets 4, 7 and 10 and
+/// digits everywhere else, so a file like `font-2026-10-25-123456.ttf` is
+/// recognised while a short or misplaced-dash name is not.
+pub fn is_stamped_name(name: &str, stem: &str, ext: &str) -> bool {
+    let prefix = format!("{stem}-");
+    if !name.starts_with(&prefix) || !name.ends_with(ext) {
+        return false;
+    }
+    let middle = &name[prefix.len()..name.len() - ext.len()];
+    if middle.len() != 17 {
+        return false;
+    }
+    middle.chars().enumerate().all(|(index, c)| {
+        if matches!(index, 4 | 7 | 10) {
+            c == '-'
+        } else {
+            c.is_ascii_digit()
+        }
+    })
+}
+
+/// Copies `source` into `dir` under a timestamped name with extension `ext`.
+///
+/// See [`make_backup`]; identical except the caller chooses the extension
+/// (including the leading dot, e.g. `".ttf"`).
+pub fn make_unique_backup(
+    source: &Path,
+    dir: &Path,
+    prefix: &str,
+    ext: &str,
+) -> Result<Option<Backup>> {
     if !source.exists() {
         return Ok(None);
     }
-    std::fs::create_dir_all(backups_dir)?;
+    std::fs::create_dir_all(dir)?;
     let bytes = std::fs::read(source)?;
 
     let (at, utc_fallback) = match OffsetDateTime::now_local() {
@@ -65,10 +101,10 @@ pub fn make_backup(source: &Path, backups_dir: &Path, prefix: &str) -> Result<Op
     };
     let stamp = format_timestamp(at, None);
 
-    let mut destination = backups_dir.join(format!("{prefix}-{stamp}.properties"));
+    let mut destination = dir.join(format!("{prefix}-{stamp}{ext}"));
     let mut counter = 1;
     while destination.exists() {
-        destination = backups_dir.join(format!("{prefix}-{stamp}-{counter}.properties"));
+        destination = dir.join(format!("{prefix}-{stamp}-{counter}{ext}"));
         counter += 1;
     }
     std::fs::write(&destination, bytes)?;
@@ -181,5 +217,57 @@ mod tests {
         std::fs::write(dir.path().join("new"), b"x").unwrap();
         let listed = list_backups(dir.path()).unwrap();
         assert_eq!(listed[0].file_name().unwrap(), "new");
+    }
+
+    #[test]
+    fn stamped_name_accepts_17_char_stamp() {
+        assert!(is_stamped_name(
+            "colors-2026-10-25-123456.properties",
+            "colors",
+            ".properties"
+        ));
+        assert!(is_stamped_name("font-2026-10-25-123456.ttf", "font", ".ttf"));
+    }
+
+    #[test]
+    fn stamped_name_rejects_wrong_length() {
+        assert!(!is_stamped_name(
+            "colors-2026-10-25-12345.properties",
+            "colors",
+            ".properties"
+        ));
+        assert!(!is_stamped_name(
+            "colors-2026-10-25.properties",
+            "colors",
+            ".properties"
+        ));
+    }
+
+    #[test]
+    fn stamped_name_rejects_misplaced_dashes() {
+        assert!(!is_stamped_name(
+            "colors-2026-1-25-123456.properties",
+            "colors",
+            ".properties"
+        ));
+        assert!(!is_stamped_name(
+            "colors-2026-10-25-12345x.properties",
+            "colors",
+            ".properties"
+        ));
+    }
+
+    #[test]
+    fn make_unique_backup_writes_custom_ext() {
+        let dir = tempfile::tempdir().unwrap();
+        let source = dir.path().join("font.ttf");
+        std::fs::write(&source, b"fontbytes").unwrap();
+        let backups = dir.path().join("backups");
+        let backup = make_unique_backup(&source, &backups, "font", ".ttf")
+            .unwrap()
+            .unwrap();
+        let name = backup.path.file_name().unwrap().to_str().unwrap().to_string();
+        assert!(name.starts_with("font-") && name.ends_with(".ttf"));
+        assert_eq!(std::fs::read(&backup.path).unwrap(), b"fontbytes");
     }
 }
