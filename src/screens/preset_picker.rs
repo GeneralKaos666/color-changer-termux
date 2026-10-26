@@ -5,11 +5,12 @@ use std::path::PathBuf;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Paragraph};
 
+use crate::chrome;
 use crate::library::{ThemeRef, active_theme_path, apply_theme, reload_termux, scan_themes};
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
@@ -18,6 +19,7 @@ use crate::presets::materialize;
 use crate::screens::ScreenAction;
 use crate::theme::Palette;
 use crate::ui::focus::{Move, list_move};
+use crate::ui::glyphs;
 use crate::ui::input::Field;
 use crate::ui::text;
 
@@ -311,7 +313,8 @@ impl PresetPicker {
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
             .title(format!(" themes ({})", self.visible.len()))
-            .border_style(Style::default().fg(palette.primary))
+            .title_alignment(Alignment::Left)
+            .border_style(Style::default().fg(chrome::accent(palette.dark)))
             .style(Style::default().bg(palette.surface));
         let inner = block.inner(area);
         frame.render_widget(block, area);
@@ -328,9 +331,9 @@ impl PresetPicker {
             Style::default().fg(palette.muted)
         };
         let text = if self.filter.value().is_empty() {
-            "filter themes…"
+            format!("{}filter themes", glyphs::filter())
         } else {
-            self.filter.value()
+            self.filter.value().to_owned()
         };
         frame.render_widget(Paragraph::new(text).style(filter_style), filter_area);
 
@@ -346,9 +349,9 @@ impl PresetPicker {
                     let mut spans = vec![Span::raw(theme.label())];
                     if self.is_active(theme) {
                         spans.push(Span::styled(
-                            "  ✓ active",
+                            format!("  {} active", glyphs::dot()),
                             Style::default()
-                                .fg(palette.success)
+                                .fg(chrome::accent(palette.dark))
                                 .add_modifier(Modifier::BOLD),
                         ));
                     }
@@ -357,11 +360,11 @@ impl PresetPicker {
                 .collect()
         };
         let list = List::new(items)
-            .highlight_symbol("› ")
+            .highlight_symbol(glyphs::marker())
             .highlight_style(
                 Style::default()
-                    .bg(palette.primary)
-                    .fg(palette.background)
+                    .bg(chrome::accent(palette.dark))
+                    .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
             )
             .style(Style::default().bg(palette.surface));
@@ -373,7 +376,8 @@ impl PresetPicker {
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
             .title(" preview")
-            .border_style(Style::default().fg(palette.secondary))
+            .title_alignment(Alignment::Left)
+            .border_style(Style::default().fg(chrome::accent(palette.dark)))
             .style(Style::default().bg(palette.surface));
         let inner = block.inner(area);
         frame.render_widget(block, area);
@@ -400,9 +404,9 @@ impl PresetPicker {
         )];
         if self.is_active(&theme) {
             name.push(Span::styled(
-                "  ✓ active",
+                format!("  {} active", glyphs::dot()),
                 Style::default()
-                    .fg(palette.success)
+                    .fg(chrome::accent(palette.dark))
                     .add_modifier(Modifier::BOLD),
             ));
         }
