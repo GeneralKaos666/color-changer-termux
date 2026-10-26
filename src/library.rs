@@ -137,21 +137,47 @@ pub fn active_colors(paths: &Paths) -> TerminalColors {
 pub fn apply_theme(theme: &Path, colors_properties: &Path) -> Result<()> {
     let resolved =
         std::fs::canonicalize(theme).map_err(|_| Error::NotFound(theme.to_path_buf()))?;
+    if !resolved.is_file() {
+        return Err(Error::Invalid(format!(
+            "theme is not a file: {}",
+            theme.display()
+        )));
+    }
     if let Ok(existing) = std::fs::canonicalize(colors_properties) {
         if existing == resolved {
             return Ok(());
         }
     }
-    if let Some(parent) = colors_properties
+    if let Ok(meta) = std::fs::symlink_metadata(colors_properties) {
+        if meta.file_type().is_dir() {
+            return Err(Error::Invalid(format!(
+                "{} is a directory",
+                colors_properties.display()
+            )));
+        }
+    }
+    let dir = colors_properties
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
-    {
-        std::fs::create_dir_all(parent)?;
+        .unwrap_or_else(|| Path::new("."));
+    std::fs::create_dir_all(dir)?;
+    let file_name = colors_properties
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "colors.properties".to_owned());
+    let tmp = dir.join(format!(".{file_name}.tmp-{}", std::process::id()));
+
+    // Create the new link under a temp name, then atomically rename it over the
+    // destination, so a failure never leaves `colors.properties` missing or
+    // pointing at nothing.
+    if let Err(error) = std::os::unix::fs::symlink(&resolved, &tmp) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(error.into());
     }
-    if colors_properties.is_symlink() || colors_properties.exists() {
-        std::fs::remove_file(colors_properties)?;
+    if let Err(error) = std::fs::rename(&tmp, colors_properties) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(error.into());
     }
-    std::os::unix::fs::symlink(&resolved, colors_properties)?;
     Ok(())
 }
 

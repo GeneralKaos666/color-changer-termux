@@ -1,3 +1,4 @@
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 use termux_settings::library::{active_theme_path, apply_theme, reload_with_path_env, scan_themes};
@@ -88,4 +89,61 @@ fn apply_rejects_a_missing_theme() {
 #[test]
 fn reload_returns_false_without_the_binary() {
     assert!(!reload_with_path_env(Some("/nonexistent")));
+}
+
+#[test]
+fn directory_target_is_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    let theme = dir.path().join("dark").join("T.properties");
+    std::fs::create_dir_all(theme.parent().unwrap()).unwrap();
+    std::fs::write(&theme, BODY).unwrap();
+    let link = dir.path().join("colors.properties");
+    std::fs::create_dir_all(&link).unwrap();
+
+    assert!(apply_theme(&theme, &link).is_err());
+    assert!(link.is_dir());
+}
+
+#[test]
+fn theme_resolving_to_directory_is_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    let link = dir.path().join("colors.properties");
+    std::fs::write(&link, BODY).unwrap();
+    let theme = dir.path().join("adirectory");
+    std::fs::create_dir_all(&theme).unwrap();
+
+    assert!(apply_theme(&theme, &link).is_err());
+    assert_eq!(std::fs::read_to_string(&link).unwrap(), BODY);
+    assert!(!link.symlink_metadata().unwrap().file_type().is_symlink());
+}
+
+#[test]
+fn failed_swap_leaves_old_link() {
+    let dir = tempfile::tempdir().unwrap();
+    let theme = dir.path().join("dark").join("T.properties");
+    std::fs::create_dir_all(theme.parent().unwrap()).unwrap();
+    std::fs::write(&theme, BODY).unwrap();
+    let link = dir.path().join("colors.properties");
+    std::fs::write(&link, BODY).unwrap();
+
+    std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o500)).unwrap();
+    assert!(apply_theme(&theme, &link).is_err());
+    std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    assert_eq!(std::fs::read_to_string(&link).unwrap(), BODY);
+    assert!(!link.symlink_metadata().unwrap().file_type().is_symlink());
+}
+
+#[test]
+fn self_link_is_a_noop() {
+    let dir = tempfile::tempdir().unwrap();
+    let theme = dir.path().join("dark").join("T.properties");
+    std::fs::create_dir_all(theme.parent().unwrap()).unwrap();
+    std::fs::write(&theme, BODY).unwrap();
+    let link = dir.path().join("colors.properties");
+    std::os::unix::fs::symlink(&theme, &link).unwrap();
+
+    apply_theme(&theme, &link).unwrap();
+    assert!(link.symlink_metadata().unwrap().file_type().is_symlink());
+    assert_eq!(std::fs::read_to_string(&link).unwrap(), BODY);
 }
