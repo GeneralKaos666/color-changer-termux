@@ -2,12 +2,14 @@
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 
+use crate::chrome;
 use crate::model::colors::Rgb;
 use crate::theme::Palette;
+use crate::ui::glyphs;
 use crate::ui::input::Field;
 use crate::ui::text::swatch;
 
@@ -35,7 +37,7 @@ pub fn section_rule(frame: &mut Frame, area: Rect, title: &str, palette: &Palett
     );
     if rule_area.width > 0 {
         frame.render_widget(
-            Paragraph::new("─".repeat(rule_area.width as usize))
+            Paragraph::new(glyphs::rule_char().to_string().repeat(rule_area.width as usize))
                 .style(Style::default().fg(palette.muted)),
             rule_area,
         );
@@ -90,7 +92,9 @@ pub fn field_row(
     let style = if invalid {
         Style::default().fg(palette.error).bg(palette.boost)
     } else if focused {
-        Style::default().fg(palette.background).bg(palette.primary)
+        Style::default()
+            .fg(Color::White)
+            .bg(chrome::accent(palette.dark))
     } else {
         Style::default().fg(palette.foreground).bg(palette.surface)
     };

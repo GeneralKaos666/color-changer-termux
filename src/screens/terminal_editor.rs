@@ -4,12 +4,13 @@ use std::path::PathBuf;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Paragraph};
 
 use crate::app::Command;
+use crate::chrome;
 use crate::library::{active_theme_path, apply_theme, reload_termux};
 use crate::model::colors::{ColorField, PALETTE_SIZE, Rgb, TerminalColors};
 use crate::paths::Paths;
@@ -424,7 +425,8 @@ impl TerminalEditor {
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
             .title(" terminal colors")
-            .border_style(Style::default().fg(palette.primary))
+            .title_alignment(Alignment::Left)
+            .border_style(Style::default().fg(chrome::accent(palette.dark)))
             .style(Style::default().bg(palette.surface));
         let inner = block.inner(area);
         frame.render_widget(block, area);
@@ -465,7 +467,8 @@ impl TerminalEditor {
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
             .title(" preview")
-            .border_style(Style::default().fg(palette.secondary))
+            .title_alignment(Alignment::Left)
+            .border_style(Style::default().fg(chrome::accent(palette.dark)))
             .style(Style::default().bg(palette.surface));
         let inner = block.inner(area);
         frame.render_widget(block, area);
