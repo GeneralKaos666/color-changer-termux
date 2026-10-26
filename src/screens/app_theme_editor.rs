@@ -426,8 +426,12 @@ fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, palet
     if row.is_selector() {
         let current = row.value.clone().unwrap_or_else(|| "unset".to_owned());
         frame.render_widget(
-            Paragraph::new(format!("{} {current} {}", glyphs::chip().0, glyphs::chip().1))
-                .style(control_style),
+            Paragraph::new(format!(
+                "{} {current} {}",
+                glyphs::chip().0,
+                glyphs::chip().1
+            ))
+            .style(control_style),
             control_area,
         );
     } else {

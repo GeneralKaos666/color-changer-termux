@@ -1,16 +1,18 @@
 # termux-settings
 
 A keyboard-driven TUI for [Termux](https://termux.dev) that changes your
-terminal colour scheme and your Termux app theme.
+terminal colours, your Termux app theme, and your fonts.
 
 ```
-┌─────────────────────────────┐
-│  Termux Color Changer       │
-│  [ Preset Themes ]          │
-│  [ Terminal Colors ]        │
-│  [ App Theme ]              │
-│  [ Quit ]                   │
+termux-settings
+┌─ menu ──────────────────────┐
+│ ▶ Preset Themes             │
+│   Terminal Colors           │
+│   App Theme                 │
+│   Fonts                     │
+│   Quit                      │
 └─────────────────────────────┘
+↑/↓ move · Enter open · Esc quit · Ctrl+C quit
 ```
 
 ## Features

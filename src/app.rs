@@ -239,7 +239,7 @@ impl App {
                 "terminal too small ({MIN_WIDTH}×{MIN_HEIGHT} minimum)"
             ))
             .alignment(Alignment::Center)
-            .style(Style::default().fg(self.palette.warning)),
+            .style(Style::default().fg(chrome::accent(self.palette.dark))),
             row,
         );
     }

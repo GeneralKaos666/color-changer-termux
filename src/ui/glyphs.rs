@@ -4,20 +4,12 @@ use crate::ui::ascii::is_ascii;
 
 /// The selection marker (`▶ ` / `> `).
 pub fn marker() -> &'static str {
-    if is_ascii() {
-        "> "
-    } else {
-        "▶ "
-    }
+    if is_ascii() { "> " } else { "▶ " }
 }
 
 /// The dotted rule character (`┄` / `-`).
 pub fn rule_char() -> char {
-    if is_ascii() {
-        '-'
-    } else {
-        '┄'
-    }
+    if is_ascii() { '-' } else { '┄' }
 }
 
 /// The badge/slot chip delimiters (`⟨ ⟩` / `< >`).
@@ -31,29 +23,17 @@ pub fn chip() -> (&'static str, &'static str) {
 
 /// The active-badge dot (`●` / `*`).
 pub fn dot() -> &'static str {
-    if is_ascii() {
-        "*"
-    } else {
-        "●"
-    }
+    if is_ascii() { "*" } else { "●" }
 }
 
 /// The ellipsis (`…` / `...`).
 pub fn ellipsis() -> &'static str {
-    if is_ascii() {
-        "..."
-    } else {
-        "…"
-    }
+    if is_ascii() { "..." } else { "…" }
 }
 
 /// The filter glyph (`⌕ ` / `? `).
 pub fn filter() -> &'static str {
-    if is_ascii() {
-        "? "
-    } else {
-        "⌕ "
-    }
+    if is_ascii() { "? " } else { "⌕ " }
 }
 
 #[cfg(test)]

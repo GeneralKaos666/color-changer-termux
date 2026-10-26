@@ -37,8 +37,12 @@ pub fn section_rule(frame: &mut Frame, area: Rect, title: &str, palette: &Palett
     );
     if rule_area.width > 0 {
         frame.render_widget(
-            Paragraph::new(glyphs::rule_char().to_string().repeat(rule_area.width as usize))
-                .style(Style::default().fg(palette.muted)),
+            Paragraph::new(
+                glyphs::rule_char()
+                    .to_string()
+                    .repeat(rule_area.width as usize),
+            )
+            .style(Style::default().fg(palette.muted)),
             rule_area,
         );
     }
