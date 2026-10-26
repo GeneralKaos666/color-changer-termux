@@ -8,7 +8,6 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use termux_settings::app::{App, Command};
-use termux_settings::model::app_theme::validate_value;
 use termux_settings::paths::Paths;
 use termux_settings::screens::Screen;
 use termux_settings::screens::app_theme_editor::AppThemeEditor;
@@ -195,9 +194,7 @@ pub fn set_row(app: &mut App, key: &str, value: &str) {
         .iter_mut()
         .find(|row| row.spec.key == key)
         .expect("a curated row");
-    row.value = (!value.is_empty()).then(|| value.to_owned());
-    row.field.set_value(value);
-    row.invalid = validate_value(row.spec, value).is_err();
+    row.set_value(value);
 }
 
 /// The open terminal editor.

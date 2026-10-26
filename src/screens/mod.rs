@@ -137,7 +137,7 @@ impl Screen {
             Self::Main(_) => ScreenAction::None,
             Self::Presets(screen) => screen.opened(paths),
             Self::Terminal(screen) => screen.opened(),
-            Self::AppTheme(_) => ScreenAction::None,
+            Self::AppTheme(screen) => screen.opened(paths),
             Self::FontsTab(screen) => screen.opened(paths),
             Self::FontCatalog(screen) => screen.opened(paths),
         }

@@ -33,11 +33,8 @@ const KEY_WIDTH: u16 = 18;
 pub struct Row {
     /// The curated field this row edits.
     pub spec: &'static FieldSpec,
-    /// The chosen value of a selector; [`None`] means unset.
-    ///
-    /// Text and integer rows keep their value in [`Row::field`] instead, and
-    /// mirror it here so a save or revert keeps both in step.
-    pub value: Option<String>,
+    /// The selected choice of a selector row; [`None`] means unset.
+    pub selection: Option<usize>,
     /// The text buffer of a text or integer row.
     pub field: Field,
     /// Whether the current value fails validation.
@@ -48,7 +45,11 @@ impl Row {
     /// The value the row currently describes.
     fn current(&self) -> String {
         match self.spec.kind {
-            FieldKind::Bool | FieldKind::Choice => self.value.clone().unwrap_or_default(),
+            FieldKind::Bool | FieldKind::Choice => self
+                .selection
+                .and_then(|index| self.choices().get(index).copied())
+                .unwrap_or_default()
+                .to_owned(),
             FieldKind::Text | FieldKind::Int => self.field.value().trim().to_owned(),
         }
     }
@@ -60,11 +61,28 @@ impl Row {
 
     /// The values a selector cycles through, in order.
     fn choices(&self) -> Vec<&'static str> {
-        match self.spec.kind {
-            FieldKind::Bool => vec!["true", "false"],
-            FieldKind::Choice => self.spec.choices.to_vec(),
-            FieldKind::Text | FieldKind::Int => Vec::new(),
+        choices_for(self.spec)
+    }
+
+    /// Store `value`, updating the selector index or text field as appropriate.
+    pub fn set_value(&mut self, value: &str) {
+        if self.is_selector() {
+            self.selection = (!value.is_empty())
+                .then(|| self.choices().iter().position(|choice| *choice == value))
+                .flatten();
+        } else {
+            self.field.set_value(value);
         }
+        self.invalid = (!value.is_empty()) && validate_value(self.spec, value).is_err();
+    }
+}
+
+/// The values a selector field cycles through, in order.
+fn choices_for(spec: &FieldSpec) -> Vec<&'static str> {
+    match spec.kind {
+        FieldKind::Bool => vec!["true", "false"],
+        FieldKind::Choice => spec.choices.to_vec(),
+        FieldKind::Text | FieldKind::Int => Vec::new(),
     }
 }
 
@@ -86,7 +104,7 @@ enum Slot {
 /// The app-theme editor's state.
 pub struct AppThemeEditor {
     /// One row per curated field, in schema order.
-    pub rows: [Row; 9],
+    pub rows: Vec<Row>,
     /// Index into [`AppThemeEditor::rows`] with the keyboard.
     pub focus: usize,
     /// First form row drawn, so the focused field stays visible.
@@ -98,23 +116,31 @@ pub struct AppThemeEditor {
     /// The step a dialog answer resumes.
     pending: Option<ThemePending>,
     visible_rows: usize,
+    /// Why `termux.properties` could not be read, when it could not.
+    load_error: Option<String>,
 }
 
 impl AppThemeEditor {
     /// Load the rows from `termux.properties`.
     pub fn new(paths: &Paths) -> Self {
-        let theme = read_app_theme(&paths.termux_properties()).unwrap_or_default();
-        let rows = std::array::from_fn(|index| {
-            let spec = &CURATED_FIELDS[index];
-            let current = theme.get(spec.key).to_owned();
-            let value = (!current.is_empty()).then(|| current.clone());
-            Row {
-                spec,
-                field: Field::new(&current),
-                invalid: (!current.is_empty()) && validate_value(spec, &current).is_err(),
-                value,
-            }
-        });
+        let (theme, load_error) = match read_app_theme(&paths.termux_properties()) {
+            Ok(theme) => (theme, None),
+            Err(error) => (AppTheme::default(), Some(error.to_string())),
+        };
+        let rows: Vec<Row> = CURATED_FIELDS
+            .iter()
+            .map(|spec| {
+                let current = theme.get(spec.key).to_owned();
+                let mut row = Row {
+                    spec,
+                    selection: None,
+                    field: Field::new(""),
+                    invalid: false,
+                };
+                row.set_value(&current);
+                row
+            })
+            .collect();
         Self {
             rows,
             focus: 0,
@@ -123,13 +149,30 @@ impl AppThemeEditor {
             path_hint: paths.termux_properties().display().to_string(),
             pending: None,
             visible_rows: DEFAULT_VISIBLE_ROWS,
+            load_error,
         }
+    }
+
+    /// The action the editor emits when it is first opened.
+    pub fn opened(&mut self, _paths: &Paths) -> ScreenAction {
+        if let Some(error) = &self.load_error {
+            return ScreenAction::OpenDialog(Dialog::message(
+                &format!("Could not read termux.properties: {error}"),
+                "App theme",
+            ));
+        }
+        ScreenAction::None
     }
 
     /// Run the save or revert flow `command` asks for.
     pub fn command(&mut self, command: Command, paths: &Paths) -> ScreenAction {
         match command {
-            Command::Save => self.start_save(paths),
+            Command::Save => {
+                if self.load_error.is_some() {
+                    return ScreenAction::Status("Not saved: settings unreadable".to_owned());
+                }
+                self.start_save(paths)
+            }
             Command::Revert => self.start_revert(paths),
             Command::SaveAs => ScreenAction::None,
         }
@@ -231,7 +274,6 @@ impl AppThemeEditor {
             _ => {}
         }
         if self.rows[self.focus].field.handle_key(key) {
-            self.rows[self.focus].value = Some(self.rows[self.focus].field.value().to_owned());
             self.validate_focus();
         }
         ScreenAction::None
@@ -241,17 +283,14 @@ impl AppThemeEditor {
     fn cycle(&mut self, forward: bool) {
         let row = &mut self.rows[self.focus];
         let choices = row.choices();
-        let step = |index: Option<usize>| match index {
-            Some(index) if forward => (index + 1 < choices.len()).then_some(index + 1),
-            Some(index) => index.checked_sub(1),
-            None if forward => (!choices.is_empty()).then_some(0),
-            None => choices.len().checked_sub(1),
+        let next = match (row.selection, forward) {
+            (Some(index), true) if index + 1 < choices.len() => Some(index + 1),
+            (Some(_), true) => None,
+            (Some(index), false) => index.checked_sub(1),
+            (None, true) => (!choices.is_empty()).then_some(0),
+            (None, false) => choices.len().checked_sub(1),
         };
-        let current = row
-            .value
-            .as_ref()
-            .and_then(|value| choices.iter().position(|choice| choice == value));
-        row.value = step(current).map(|index| choices[index].to_owned());
+        row.selection = next;
     }
 
     /// Recompute the focused row's error state.
@@ -265,9 +304,7 @@ impl AppThemeEditor {
     fn load_rows(&mut self) {
         for row in &mut self.rows {
             let current = self.theme.get(row.spec.key).to_owned();
-            row.value = (!current.is_empty()).then(|| current.clone());
-            row.field.set_value(&current);
-            row.invalid = (!current.is_empty()) && validate_value(row.spec, &current).is_err();
+            row.set_value(&current);
         }
     }
 
@@ -420,10 +457,15 @@ fn render_row(frame: &mut Frame, area: Rect, row: &Row, focused: bool, ui: &Ui) 
             .bg(ui.palette.boost)
     };
     if row.is_selector() {
-        let current = row.value.clone().unwrap_or_else(|| "unset".to_owned());
+        let current = row.current();
+        let display = if current.is_empty() {
+            "unset".to_owned()
+        } else {
+            current
+        };
         frame.render_widget(
             Paragraph::new(format!(
-                "{} {current} {}",
+                "{} {display} {}",
                 ui.glyphs.chip().0,
                 ui.glyphs.chip().1
             ))

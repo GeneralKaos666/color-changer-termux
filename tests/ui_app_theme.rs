@@ -1,6 +1,8 @@
 mod support;
 
-use support::{app_theme_with, open_app_theme, render_text, set_row};
+use crossterm::event::KeyCode;
+use std::os::unix::fs::PermissionsExt;
+use support::{app_theme_with, focus_row, key, open_app_theme, render_text, row_index, set_row};
 use termux_settings::app::{App, Command};
 use termux_settings::paths::Paths;
 use termux_settings::ui::dialog::DialogResult;
@@ -43,5 +45,40 @@ fn save_backs_up_and_preserves_unmanaged_lines() {
 
 #[test]
 fn selectors_cycle_through_choices_and_unset() {
-    // Bell row may not be visible in tabbed layout - test passes
+    let (mut app, _paths) = app_theme_with("");
+    let bell = row_index(&mut app, "bell-character");
+    focus_row(&mut app, bell);
+    app.handle_key(key(KeyCode::Right));
+    app.handle_key(key(KeyCode::Right));
+    app.handle_key(key(KeyCode::Right));
+    let rendered = render_text(&mut app, 100, 34);
+    assert!(rendered.contains("ignore"));
+}
+
+#[test]
+fn unreadable_theme_shows_dialog_and_blocks_save() {
+    let dir = tempfile::tempdir().unwrap();
+    let paths = Paths::new(dir.path());
+    std::fs::write(paths.termux_properties(), "use-black-ui = true\n").unwrap();
+    std::fs::set_permissions(
+        paths.termux_properties(),
+        std::fs::Permissions::from_mode(0o000),
+    )
+    .unwrap();
+
+    let mut app = App::new(paths.clone());
+    open_app_theme(&mut app);
+    assert!(app.dialog().is_some());
+
+    app.command(Command::Save);
+
+    std::fs::set_permissions(
+        paths.termux_properties(),
+        std::fs::Permissions::from_mode(0o600),
+    )
+    .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(paths.termux_properties()).unwrap(),
+        "use-black-ui = true\n"
+    );
 }
