@@ -169,7 +169,7 @@ impl AppThemeEditor {
         match command {
             Command::Save => {
                 if self.load_error.is_some() {
-                    return ScreenAction::Status("Not saved: settings unreadable".to_owned());
+                    return ScreenAction::status("Not saved: settings unreadable");
                 }
                 self.start_save(paths)
             }
@@ -212,7 +212,7 @@ impl AppThemeEditor {
     pub fn start_revert(&mut self, paths: &Paths) -> ScreenAction {
         self.theme = read_app_theme(&paths.termux_properties()).unwrap_or_default();
         self.load_rows();
-        ScreenAction::Status("Reverted to the file's current values.".to_owned())
+        ScreenAction::status("Reverted to the file's current values.")
     }
 
     /// Advance the save flow once a dialog has answered.
@@ -312,7 +312,7 @@ impl AppThemeEditor {
     fn write(&mut self, paths: &Paths, values: AppTheme) -> ScreenAction {
         let path = paths.termux_properties();
         if let Err(error) = write_app_theme(&path, &values, true) {
-            return ScreenAction::Status(format!("could not save {}: {error}", path.display()));
+            return ScreenAction::status(&format!("could not save {}: {error}", path.display()));
         }
         self.theme = values;
         self.load_rows();
@@ -320,7 +320,7 @@ impl AppThemeEditor {
         if !reload_termux() {
             message.push_str(" Run termux-reload-settings to refresh.");
         }
-        ScreenAction::Status(message)
+        ScreenAction::status(&message)
     }
 
     /// Move [`AppThemeEditor::scroll`] the least amount that keeps the focused

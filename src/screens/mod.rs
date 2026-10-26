@@ -47,16 +47,34 @@ pub enum ScreenAction {
     Push(ScreenKind),
     /// Close the current screen.
     Pop,
-    /// Re-derive the UI palette from these colours.
-    RefreshPalette(TerminalColors),
-    /// Show `message` in the status line.
-    Status(String),
-    /// Re-derive the UI palette from these colours and show `message`.
-    RefreshPaletteAndStatus(TerminalColors, String),
     /// Show a modal dialog over the current screen.
     OpenDialog(Dialog),
+    /// Re-derive the palette from `colors` and/or show `message`.
+    Applied {
+        colors: Option<TerminalColors>,
+        message: Option<String>,
+    },
     /// Download and install a Nerd Font.
     SpawnDownload { name: String, url: String },
+}
+
+impl ScreenAction {
+    /// Show `msg` in the status line.
+    pub fn status(msg: &str) -> Self {
+        Self::Applied {
+            colors: None,
+            message: Some(msg.to_owned()),
+        }
+    }
+
+    /// Re-derive the palette from `colors` and, when `msg` is non-empty, show
+    /// it in the status line.
+    pub fn applied(colors: TerminalColors, msg: &str) -> Self {
+        Self::Applied {
+            colors: Some(colors),
+            message: (!msg.is_empty()).then(|| msg.to_owned()),
+        }
+    }
 }
 
 /// The screens this application can show.
@@ -75,15 +93,15 @@ pub enum Screen {
 }
 
 impl Screen {
-    /// Build the screen of `kind`, if it exists yet.
-    pub fn new(kind: ScreenKind, paths: &Paths) -> Option<Self> {
+    /// Build the screen of `kind`.
+    pub fn new(kind: ScreenKind, paths: &Paths) -> Self {
         match kind {
-            ScreenKind::Main => Some(Self::Main(MainMenu::new(paths))),
-            ScreenKind::Presets => Some(Self::Presets(PresetPicker::new(paths))),
-            ScreenKind::Terminal => Some(Self::Terminal(Box::new(TerminalEditor::new(paths)))),
-            ScreenKind::AppTheme => Some(Self::AppTheme(Box::new(AppThemeEditor::new(paths)))),
-            ScreenKind::FontsTab => Some(Self::FontsTab(FontsTab::new(paths))),
-            ScreenKind::FontCatalog => Some(Self::FontCatalog(FontCatalog::new(paths))),
+            ScreenKind::Main => Self::Main(MainMenu::new(paths)),
+            ScreenKind::Presets => Self::Presets(PresetPicker::new(paths)),
+            ScreenKind::Terminal => Self::Terminal(Box::new(TerminalEditor::new(paths))),
+            ScreenKind::AppTheme => Self::AppTheme(Box::new(AppThemeEditor::new(paths))),
+            ScreenKind::FontsTab => Self::FontsTab(FontsTab::new(paths)),
+            ScreenKind::FontCatalog => Self::FontCatalog(FontCatalog::new(paths)),
         }
     }
 
@@ -101,9 +119,12 @@ impl Screen {
 
     /// Re-read externally mutable data (for example the active theme) after
     /// the screen is revealed again.
-    pub fn refresh(&mut self, paths: &Paths) {
-        if let Self::Main(screen) = self {
-            screen.refresh(paths);
+    pub fn reload(&mut self, paths: &Paths) {
+        match self {
+            Self::Main(screen) => screen.reload(paths),
+            Self::Presets(screen) => screen.reload(paths),
+            Self::FontsTab(screen) => screen.refresh_entries(paths),
+            _ => {}
         }
     }
 

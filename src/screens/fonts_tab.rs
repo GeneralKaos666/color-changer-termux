@@ -54,7 +54,7 @@ impl FontsTab {
         }
     }
 
-    fn refresh_entries(&mut self, paths: &Paths) {
+    pub fn refresh_entries(&mut self, paths: &Paths) {
         self.entries = scan::list_library(paths).unwrap_or_default();
         self.visible = (0..self.entries.len()).collect();
         self.state.select((!self.visible.is_empty()).then_some(0));
@@ -123,7 +123,7 @@ impl FontsTab {
             }
             KeyCode::Char('s') => {
                 self.slot = (self.slot + 1) % FontSlot::ALL.len();
-                ScreenAction::Status(format!("Slot: {}", FontSlot::ALL[self.slot].as_str()))
+                ScreenAction::status(&format!("Slot: {}", FontSlot::ALL[self.slot].as_str()))
             }
             KeyCode::Char('p') | KeyCode::Char(' ') => {
                 let selected = self
@@ -136,8 +136,8 @@ impl FontsTab {
                         FontSlot::ALL[self.slot],
                         &mut self.session,
                     ) {
-                        Ok(_) => ScreenAction::Status(format!("Previewing {name}")),
-                        Err(error) => ScreenAction::Status(format!("Preview failed: {error}")),
+                        Ok(_) => ScreenAction::status(&format!("Previewing {name}")),
+                        Err(error) => ScreenAction::status(&format!("Preview failed: {error}")),
                     }
                 } else {
                     ScreenAction::None
@@ -146,7 +146,7 @@ impl FontsTab {
             KeyCode::Enter => {
                 if apply::is_dirty(&self.session) {
                     let _ = apply::commit_preview(paths, &mut self.session);
-                    return ScreenAction::Status("Font applied".to_owned());
+                    return ScreenAction::status("Font applied");
                 }
                 ScreenAction::None
             }
@@ -213,12 +213,12 @@ impl FontsTab {
         match importer::import_file(paths, src, mode) {
             Ok(dest) => {
                 self.refresh_entries(paths);
-                ScreenAction::Status(format!(
+                ScreenAction::status(&format!(
                     "Imported {}",
                     dest.file_name().unwrap_or_default().to_string_lossy()
                 ))
             }
-            Err(error) => ScreenAction::Status(format!("Import failed: {error}")),
+            Err(error) => ScreenAction::status(&format!("Import failed: {error}")),
         }
     }
 

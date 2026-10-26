@@ -50,7 +50,7 @@ impl MainMenu {
     }
 
     /// Re-read the active theme after a change made on another screen.
-    pub fn refresh(&mut self, paths: &Paths) {
+    pub fn reload(&mut self, paths: &Paths) {
         self.colors = active_colors(paths);
         self.active_label = active_name(paths);
     }

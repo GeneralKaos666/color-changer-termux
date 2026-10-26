@@ -150,12 +150,6 @@ impl TerminalColors {
             ColorField::Palette(index) => self.palette[index] = color,
         }
     }
-
-    /// Report whether `key` is one of the colours this model owns, as opposed
-    /// to an entry preserved in [`TerminalColors::extra`].
-    pub fn is_managed(&self, key: &str) -> bool {
-        matches!(key, "background" | "foreground" | "cursor") || PALETTE_KEYS.contains(&key)
-    }
 }
 
 /// One selectable colour of [`TerminalColors`].
@@ -263,16 +257,5 @@ mod tests {
         assert_eq!(ColorField::ALL[18].label(), "color15  (bright white)");
         c.set_field(ColorField::Palette(4), Rgb::new(1, 2, 3));
         assert_eq!(c.field(ColorField::Palette(4)), Rgb::new(1, 2, 3));
-    }
-
-    #[test]
-    fn managed_keys_exclude_extras() {
-        let c = TerminalColors {
-            extra: vec![("selection-background".into(), "#333333".into())],
-            ..Default::default()
-        };
-        assert!(c.is_managed("cursor"));
-        assert!(c.is_managed("color15"));
-        assert!(!c.is_managed("selection-background"));
     }
 }

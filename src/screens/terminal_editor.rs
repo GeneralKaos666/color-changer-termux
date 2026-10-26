@@ -134,7 +134,7 @@ impl TerminalEditor {
     /// The action the editor emits when it is first opened: preview the
     /// colours it loaded.
     pub fn opened(&mut self) -> ScreenAction {
-        ScreenAction::RefreshPalette(self.current_colors())
+        ScreenAction::applied(self.current_colors(), "")
     }
 
     /// The key bindings the help bar shows for this screen.
@@ -167,7 +167,7 @@ impl TerminalEditor {
         }
         if self.fields[self.focus].handle_key(key) {
             self.revalidate();
-            return ScreenAction::RefreshPalette(self.current_colors());
+            return ScreenAction::applied(self.current_colors(), "");
         }
         ScreenAction::None
     }
@@ -251,10 +251,7 @@ impl TerminalEditor {
             field.set_value(&self.base.field(ColorField::ALL[index]).to_hex());
         }
         self.revalidate();
-        ScreenAction::RefreshPaletteAndStatus(
-            self.current_colors(),
-            "Reverted to the saved values.".to_owned(),
-        )
+        ScreenAction::applied(self.current_colors(), "Reverted to the saved values.")
     }
 
     /// Advance the save flow once a dialog has answered.
@@ -283,14 +280,12 @@ impl TerminalEditor {
                 }
             }
             (TerminalPending::NameForSaveAs { .. }, _) => {
-                ScreenAction::Status("Save As cancelled.".to_owned())
+                ScreenAction::status("Save As cancelled.")
             }
             (TerminalPending::Overwrite { target, colors }, DialogResult::Confirmed(true)) => {
                 self.begin_write_as(target, colors, paths)
             }
-            (TerminalPending::Overwrite { .. }, _) => {
-                ScreenAction::Status("Save As cancelled.".to_owned())
-            }
+            (TerminalPending::Overwrite { .. }, _) => ScreenAction::status("Save As cancelled."),
         }
     }
 
@@ -341,7 +336,7 @@ impl TerminalEditor {
         paths: &Paths,
     ) -> ScreenAction {
         if let Err(error) = write_colors(target, &colors, true) {
-            return ScreenAction::Status(format!("could not save {}: {error}", target.display()));
+            return ScreenAction::status(&format!("could not save {}: {error}", target.display()));
         }
         let colors_properties = paths.colors_properties();
         let same = match (
@@ -353,7 +348,7 @@ impl TerminalEditor {
         };
         if !same {
             if let Err(error) = apply_theme(target, &colors_properties) {
-                return ScreenAction::Status(format!(
+                return ScreenAction::status(&format!(
                     "could not activate {}: {error}",
                     target.display()
                 ));
@@ -369,7 +364,7 @@ impl TerminalEditor {
         if !reload_termux() {
             message.push_str(" Run termux-reload-settings to refresh.");
         }
-        ScreenAction::Status(message)
+        ScreenAction::status(&message)
     }
 
     /// The form row holding field `index`.

@@ -129,11 +129,11 @@ impl FontCatalog {
             }
             Msg::Downloaded(Ok(_)) => {
                 self.progress = None;
-                ScreenAction::Status("Font downloaded to the library".to_owned())
+                ScreenAction::status("Font downloaded to the library")
             }
             Msg::Downloaded(Err(error)) => {
                 self.progress = None;
-                ScreenAction::Status(format!("Download failed: {error}"))
+                ScreenAction::status(&format!("Download failed: {error}"))
             }
             _ => ScreenAction::None,
         }

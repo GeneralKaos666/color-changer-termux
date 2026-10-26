@@ -63,9 +63,7 @@ impl App {
     /// Build the app on the main menu with the given glyph set.
     pub fn with_glyphs(paths: Paths, glyphs: Glyphs) -> Self {
         let colors = active_colors(&paths);
-        let Some(main) = Screen::new(ScreenKind::Main, &paths) else {
-            unreachable!("the main menu always exists");
-        };
+        let main = Screen::new(ScreenKind::Main, &paths);
         Self {
             palette: Palette::from_colors(&colors),
             colors,
@@ -356,31 +354,29 @@ impl App {
                     spawn_prompt(self.runtime.sender());
                     spawn_scan(self.runtime.sender(), self.paths.clone());
                 }
-                if let Some(mut screen) = Screen::new(kind, &self.paths) {
-                    let action = screen.opened(&self.paths);
-                    self.screens.push(screen);
-                    self.apply(action);
-                }
+                let mut screen = Screen::new(kind, &self.paths);
+                let action = screen.opened(&self.paths);
+                self.screens.push(screen);
+                self.apply(action);
             }
             ScreenAction::Pop => {
                 if self.screens.len() > 1 {
                     self.screens.pop();
                 }
-                // Refresh the revealed screen (e.g. the menu's active-theme
+                // Reload the revealed screen (e.g. the menu's active-theme
                 // name after a change was applied elsewhere).
                 if let Some(screen) = self.screens.last_mut() {
-                    screen.refresh(&self.paths);
+                    screen.reload(&self.paths);
                 }
             }
-            ScreenAction::RefreshPalette(colors) => {
-                self.colors = colors;
-                self.palette = Palette::from_colors(&self.colors);
-            }
-            ScreenAction::Status(message) => self.set_status(&message),
-            ScreenAction::RefreshPaletteAndStatus(colors, message) => {
-                self.colors = colors;
-                self.palette = Palette::from_colors(&self.colors);
-                self.set_status(&message);
+            ScreenAction::Applied { colors, message } => {
+                if let Some(colors) = colors {
+                    self.colors = colors;
+                    self.palette = Palette::from_colors(&self.colors);
+                }
+                if let Some(message) = message {
+                    self.set_status(&message);
+                }
             }
             ScreenAction::OpenDialog(dialog) => self.open_dialog(dialog),
             ScreenAction::SpawnDownload { name, url } => {

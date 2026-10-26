@@ -2,7 +2,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use crate::model::font_slot::FontSlot;
 use crate::paths::Paths;
 
 #[derive(Debug, Clone)]
@@ -13,30 +12,6 @@ pub struct FontEntry {
     pub mtime: SystemTime,
     pub family: String,
     pub style: String,
-}
-
-#[derive(Debug)]
-pub struct FontDetails {
-    pub glyphs: u32,
-    pub upm: u16,
-    pub version: String,
-}
-
-pub fn describe(path: &std::path::Path) -> std::io::Result<FontDetails> {
-    let data = fs::read(path)?;
-    let face = ttf_parser::Face::parse(&data, 0)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
-    let version = face
-        .names()
-        .into_iter()
-        .find(|n| n.name_id == 5)
-        .and_then(|n| n.to_string())
-        .unwrap_or_default();
-    Ok(FontDetails {
-        glyphs: face.number_of_glyphs() as u32,
-        upm: face.units_per_em(),
-        version,
-    })
 }
 
 fn family_style(path: &std::path::Path, stem: &str) -> (String, String) {
@@ -110,19 +85,6 @@ pub fn list_library(paths: &Paths) -> std::io::Result<Vec<FontEntry>> {
             .then(a.name.cmp(&b.name))
     });
     Ok(out)
-}
-
-pub fn read_active(paths: &Paths) -> std::io::Result<std::collections::HashMap<String, PathBuf>> {
-    let mut active = std::collections::HashMap::new();
-    for slot in FontSlot::ALL {
-        let p = paths.font_slot_path(slot);
-        if let Ok(meta) = fs::metadata(&p) {
-            if meta.is_file() {
-                active.insert(slot.as_str().to_string(), p);
-            }
-        }
-    }
-    Ok(active)
 }
 
 #[cfg(test)]

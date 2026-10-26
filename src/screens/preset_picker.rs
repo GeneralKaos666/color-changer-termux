@@ -53,7 +53,8 @@ pub struct PresetPicker {
     canon: HashMap<PathBuf, PathBuf>,
     /// The theme file `colors.properties` currently resolves to.
     pub active: Option<PathBuf>,
-    paths: Paths,
+    /// The theme library root, for computing the active theme's label.
+    colors_root: PathBuf,
     focus: Focus,
 }
 
@@ -86,7 +87,7 @@ impl PresetPicker {
             list,
             cache: HashMap::new(),
             canon: HashMap::new(),
-            paths: paths.clone(),
+            colors_root: paths.colors_root(),
             focus: Focus::List,
         };
         picker.fill_cache();
@@ -134,7 +135,7 @@ impl PresetPicker {
             return "default".to_owned();
         };
         active
-            .strip_prefix(self.paths.colors_root())
+            .strip_prefix(&self.colors_root)
             .map(|rel| rel.with_extension("").to_string_lossy().into_owned())
             .unwrap_or_else(|_| "default".to_owned())
     }
@@ -166,7 +167,7 @@ impl PresetPicker {
     /// theme, as the Python screen does on mount.
     pub fn opened(&mut self, _paths: &Paths) -> ScreenAction {
         match self.selected_row() {
-            Some(row) => ScreenAction::RefreshPalette(self.colors_for(row)),
+            Some(row) => ScreenAction::applied(self.colors_for(row), ""),
             None => ScreenAction::None,
         }
     }
@@ -209,7 +210,7 @@ impl PresetPicker {
         match key.code {
             KeyCode::Enter => return self.apply(paths),
             KeyCode::Char('r') => {
-                self.reload();
+                self.reload(paths);
                 return self.refresh();
             }
             _ => {}
@@ -247,16 +248,16 @@ impl PresetPicker {
     /// Refresh the whole UI from the highlighted theme, if any.
     fn refresh(&mut self) -> ScreenAction {
         match self.selected_row() {
-            Some(row) => ScreenAction::RefreshPalette(self.colors_for(row)),
+            Some(row) => ScreenAction::applied(self.colors_for(row), ""),
             None => ScreenAction::None,
         }
     }
 
     /// Re-scan the library, keeping the filter and, when possible, the
     /// highlighted theme.
-    fn reload(&mut self) {
+    pub fn reload(&mut self, paths: &Paths) {
         let previous = self.selected().map(|theme| theme.path.clone());
-        self.all = load_themes(&self.paths);
+        self.all = load_themes(paths);
         self.cache.clear();
         self.canon.clear();
         self.fill_cache();
@@ -272,7 +273,7 @@ impl PresetPicker {
                 self.list.select(Some(row));
             }
         }
-        self.active = active_theme_path(&self.paths.colors_properties());
+        self.active = active_theme_path(&paths.colors_properties());
     }
 
     /// Link `colors.properties` to the highlighted theme.
@@ -281,14 +282,14 @@ impl PresetPicker {
             return ScreenAction::None;
         };
         if apply_theme(&theme.path, &paths.colors_properties()).is_err() {
-            return ScreenAction::Status(format!("theme not found: {}", theme.path.display()));
+            return ScreenAction::status(&format!("theme not found: {}", theme.path.display()));
         }
         self.active = std::fs::canonicalize(&theme.path).ok();
         let mut message = format!("Saved {}.", theme.label());
         if !reload_termux() {
             message.push_str(" Run termux-reload-settings to refresh.");
         }
-        ScreenAction::Status(message)
+        ScreenAction::status(&message)
     }
 
     /// Whether `theme` is the one currently linked from `colors.properties`.
