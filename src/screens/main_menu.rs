@@ -3,10 +3,11 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, List, ListItem, ListState, Paragraph};
 
+use crate::chrome;
 use crate::library::{active_colors, active_theme_path};
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
@@ -14,6 +15,7 @@ use crate::screens::{ScreenAction, ScreenKind};
 use crate::theme::Palette;
 use crate::ui::dialog::DialogResult;
 use crate::ui::focus::{Move, list_move};
+use crate::ui::glyphs;
 use crate::ui::text;
 
 /// The menu entries, in display order.
@@ -117,17 +119,13 @@ impl MainMenu {
             area,
         );
 
-        let (stacked, compact) = banner_mode(area.width, area.height);
-        let mut header = text::banner(&self.colors, area.width, stacked, compact);
-        header.push(
+        let header = vec![
             Line::from("change terminal & app colours, live")
                 .style(Style::default().fg(palette.muted))
                 .alignment(Alignment::Center),
-        );
-        header.push(Line::from(""));
-        header.push(text::palette_strip(&self.colors).alignment(Alignment::Center));
-        header.push(Line::from(""));
-        header.push(
+            Line::from(""),
+            text::palette_strip(&self.colors).alignment(Alignment::Center),
+            Line::from(""),
             Line::from(vec![
                 Span::styled("active theme  ", Style::default().fg(palette.muted)),
                 Span::styled(
@@ -138,7 +136,7 @@ impl MainMenu {
                 ),
             ])
             .alignment(Alignment::Center),
-        );
+        ];
 
         let header_height = (header.len() as u16).min(area.height.saturating_sub(MENU_HEIGHT));
         let [header_area, menu_area] = Layout::vertical([
@@ -164,34 +162,19 @@ impl MainMenu {
             .collect();
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
-            .title(Line::from("menu").alignment(Alignment::Center))
-            .border_style(Style::default().fg(palette.primary))
+            .title(Line::from(" menu").alignment(Alignment::Left))
+            .border_style(Style::default().fg(chrome::accent(palette.dark)))
             .style(Style::default().bg(palette.surface));
         let list = List::new(items)
             .block(block)
-            .highlight_symbol("› ")
+            .highlight_symbol(glyphs::marker())
             .highlight_style(
                 Style::default()
-                    .bg(palette.primary)
-                    .fg(palette.background)
+                    .bg(chrome::accent(palette.dark))
+                    .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
             );
         frame.render_stateful_widget(list, menu_rect, &mut self.list);
-    }
-}
-
-/// Which banner layout fits a terminal of `width` x `height`.
-///
-/// The thresholds match the Python authority: one row when there is room for
-/// both words, two stacked rows on a tall narrow terminal, and the compact
-/// wordmark otherwise.
-fn banner_mode(width: u16, height: u16) -> (bool, bool) {
-    if width >= 88 && height >= 14 {
-        (false, false)
-    } else if width >= 40 && height >= 24 {
-        (true, false)
-    } else {
-        (false, true)
     }
 }
 

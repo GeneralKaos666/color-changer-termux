@@ -10,6 +10,7 @@ fn menu_renders_its_four_items_and_active_theme() {
     let dir = tempfile::tempdir().unwrap();
     let mut app = App::new(Paths::new(dir.path()));
     let rendered = render_text(&mut app, 80, 20);
+    assert!(rendered.contains("termux-settings"));
     assert!(
         rendered.contains("Colors") || rendered.contains("Fonts") || rendered.contains("App Theme")
     );
