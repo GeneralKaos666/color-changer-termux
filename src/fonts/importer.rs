@@ -38,13 +38,16 @@ pub fn resolve_clash(dest: &Path) -> io::Result<PathBuf> {
         .to_string_lossy()
         .to_string();
     let dir = dest.parent().unwrap_or(Path::new("."));
-    for i in 1.. {
+    for i in 1..10_000 {
         let candidate = dir.join(format!("{stem}-{i}{ext}"));
         if !candidate.exists() {
             return Ok(candidate);
         }
     }
-    unreachable!()
+    Err(io::Error::new(
+        io::ErrorKind::AlreadyExists,
+        "too many fonts with the same name",
+    ))
 }
 
 fn same_file(a: &Path, b: &Path) -> bool {
@@ -120,4 +123,23 @@ pub fn import_file(paths: &Paths, src: &Path, clash: &str) -> crate::error::Resu
     }
     copy_file(src, &dest)?;
     Ok(dest)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_clash_appends_a_counter() {
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("A.ttf");
+        std::fs::write(&dest, b"x").unwrap();
+
+        let first = resolve_clash(&dest).unwrap();
+        assert_eq!(first, dir.path().join("A-1.ttf"));
+        std::fs::write(&first, b"x").unwrap();
+
+        let second = resolve_clash(&dest).unwrap();
+        assert_eq!(second, dir.path().join("A-2.ttf"));
+    }
 }

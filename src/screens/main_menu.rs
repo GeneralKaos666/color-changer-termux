@@ -103,7 +103,7 @@ impl MainMenu {
             ("↑/↓", "move"),
             ("Enter", "open"),
             ("Esc", "quit"),
-            ("Ctrl+C", "quit"),
+            ("q", "quit"),
         ]
     }
 
@@ -184,5 +184,19 @@ fn active_name(paths: &Paths) -> String {
             .file_name()
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| path.display().to_string()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn help_documents_the_q_quit_key() {
+        let dir = tempfile::tempdir().unwrap();
+        let menu = MainMenu::new(&Paths::new(dir.path()));
+        let keys: Vec<&str> = menu.help().into_iter().map(|(key, _)| key).collect();
+        assert!(keys.contains(&"q"));
+        assert!(keys.contains(&"Esc"));
     }
 }

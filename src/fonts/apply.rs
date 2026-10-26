@@ -156,7 +156,7 @@ pub fn commit_preview(_paths: &Paths, st: &mut SessionState) -> bool {
 }
 
 /// Restore the session-start bytes of every previewed slot.
-pub fn restore_original(paths: &Paths, st: &mut SessionState) -> io::Result<bool> {
+pub fn restore_original(paths: &Paths, st: &mut SessionState) -> crate::error::Result<bool> {
     if st.previewed.is_empty() {
         return Ok(false);
     }
@@ -171,7 +171,7 @@ pub fn restore_original(paths: &Paths, st: &mut SessionState) -> io::Result<bool
                     if let Some(parent) = target.parent() {
                         fs::create_dir_all(parent)?;
                     }
-                    fs::write(&target, data)?;
+                    crate::persist::fs::write_atomic(&target, data)?;
                 }
             }
         }

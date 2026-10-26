@@ -1,11 +1,15 @@
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use crate::fonts::validate;
 use crate::paths::Paths;
 
 const NF_BASE: &str = "https://github.com/ryanoasis/nerd-fonts/raw/v3.2.1/patched-fonts";
+
+/// How long a download may take overall before it is aborted.
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     let mut m = HashMap::new();
@@ -209,7 +213,9 @@ pub fn download(
     url: &str,
     mut on_progress: impl FnMut(u64, Option<u64>),
 ) -> Result<Vec<u8>, String> {
-    let response = ureq::get(url)
+    let agent = ureq::AgentBuilder::new().timeout(DOWNLOAD_TIMEOUT).build();
+    let response = agent
+        .get(url)
         .call()
         .map_err(|e| format!("download failed: {e}"))?;
     let total = response

@@ -26,6 +26,7 @@ pub struct FontCatalog {
     show_filter: bool,
     state: ListState,
     progress: Option<(String, u64, Option<u64>)>,
+    downloading: bool,
 }
 
 impl FontCatalog {
@@ -43,6 +44,7 @@ impl FontCatalog {
             show_filter: false,
             state,
             progress: None,
+            downloading: false,
         }
     }
 
@@ -87,9 +89,13 @@ impl FontCatalog {
                 ScreenAction::None
             }
             KeyCode::Enter => {
+                if self.downloading {
+                    return ScreenAction::status("Download in progress");
+                }
                 if let Some(row) = self.state.selected() {
                     if let Some(&index) = self.visible.get(row) {
                         if let Some((name, url)) = self.entries.get(index) {
+                            self.downloading = true;
                             return ScreenAction::SpawnDownload {
                                 name: name.clone(),
                                 url: url.clone(),
@@ -129,10 +135,12 @@ impl FontCatalog {
             }
             Msg::Downloaded(Ok(_)) => {
                 self.progress = None;
+                self.downloading = false;
                 ScreenAction::status("Font downloaded to the library")
             }
             Msg::Downloaded(Err(error)) => {
                 self.progress = None;
+                self.downloading = false;
                 ScreenAction::status(&format!("Download failed: {error}"))
             }
             _ => ScreenAction::None,
@@ -241,5 +249,38 @@ impl FontCatalog {
             )),
         };
         frame.render_widget(Paragraph::new(footer), footer_area);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::{KeyEvent, KeyModifiers};
+    use std::path::PathBuf;
+
+    fn enter() -> KeyEvent {
+        KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)
+    }
+
+    #[test]
+    fn enter_while_downloading_is_ignored() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = Paths::new(dir.path());
+        let mut catalog = FontCatalog::new(&paths);
+
+        assert!(matches!(
+            catalog.handle_key(enter(), &paths),
+            ScreenAction::SpawnDownload { .. }
+        ));
+        assert!(!matches!(
+            catalog.handle_key(enter(), &paths),
+            ScreenAction::SpawnDownload { .. }
+        ));
+
+        let _ = catalog.on_msg(&Msg::Downloaded(Ok(PathBuf::new())), &paths);
+        assert!(matches!(
+            catalog.handle_key(enter(), &paths),
+            ScreenAction::SpawnDownload { .. }
+        ));
     }
 }
