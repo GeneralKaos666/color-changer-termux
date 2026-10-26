@@ -1,17 +1,20 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
     widgets::{Block, BorderType, List, ListItem, ListState, Paragraph},
 };
 
 use crate::app::Command;
+use crate::chrome;
 use crate::fonts::{apply, prompt, scan};
 use crate::paths::Paths;
 use crate::screens::ScreenAction;
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
+use crate::ui::glyphs;
 use crate::ui::input::Field;
 
 #[derive(Clone, Debug)]
@@ -192,18 +195,25 @@ impl FontsTab {
                 Block::bordered()
                     .border_type(BorderType::Rounded)
                     .title(" Preview")
-                    .border_style(Style::default().fg(palette.secondary))
+                    .title_alignment(Alignment::Left)
+                    .border_style(Style::default().fg(chrome::accent(palette.dark)))
                     .style(Style::default().bg(palette.surface)),
             ),
             layout[0],
         );
         // slot info
+        let (open, close) = glyphs::chip();
+        let slot = Paths::slot_names()[self.slot];
         frame.render_widget(
-            Paragraph::new(format!(
-                "Slot: {} (s to cycle)",
-                Paths::slot_names()[self.slot]
-            ))
-            .style(Style::default().fg(palette.foreground)),
+            Paragraph::new(Line::from(vec![
+                Span::styled("slot  ", Style::default().fg(palette.muted)),
+                Span::styled(
+                    format!("{open} {slot} {close}"),
+                    Style::default()
+                        .fg(chrome::accent(palette.dark))
+                        .add_modifier(Modifier::BOLD),
+                ),
+            ])),
             layout[1],
         );
         // font list
@@ -217,13 +227,15 @@ impl FontsTab {
                 Block::bordered()
                     .border_type(BorderType::Rounded)
                     .title(format!(" Fonts ({})", self.entries.len()))
-                    .border_style(Style::default().fg(palette.primary))
+                    .title_alignment(Alignment::Left)
+                    .border_style(Style::default().fg(chrome::accent(palette.dark)))
                     .style(Style::default().bg(palette.surface)),
             )
+            .highlight_symbol(glyphs::marker())
             .highlight_style(
                 Style::default()
-                    .bg(palette.primary)
-                    .fg(palette.background)
+                    .bg(chrome::accent(palette.dark))
+                    .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
             );
         frame.render_stateful_widget(list, layout[2], &mut self.state);
