@@ -226,7 +226,11 @@ mod tests {
             "colors",
             ".properties"
         ));
-        assert!(is_stamped_name("font-2026-10-25-123456.ttf", "font", ".ttf"));
+        assert!(is_stamped_name(
+            "font-2026-10-25-123456.ttf",
+            "font",
+            ".ttf"
+        ));
     }
 
     #[test]
@@ -266,7 +270,13 @@ mod tests {
         let backup = make_unique_backup(&source, &backups, "font", ".ttf")
             .unwrap()
             .unwrap();
-        let name = backup.path.file_name().unwrap().to_str().unwrap().to_string();
+        let name = backup
+            .path
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
         assert!(name.starts_with("font-") && name.ends_with(".ttf"));
         assert_eq!(std::fs::read(&backup.path).unwrap(), b"fontbytes");
     }

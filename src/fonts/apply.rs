@@ -365,9 +365,14 @@ mod tests {
         let name = files[0].file_name().unwrap().to_string_lossy().to_string();
         assert!(name.starts_with("font-") && name.ends_with(".ttf"));
 
-        let today = time::OffsetDateTime::now_local()
-            .unwrap_or_else(|_| time::OffsetDateTime::now_utc());
-        let expected = format!("{:04}-{:02}-{:02}", today.year(), today.month() as u8, today.day());
+        let today =
+            time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+        let expected = format!(
+            "{:04}-{:02}-{:02}",
+            today.year(),
+            today.month() as u8,
+            today.day()
+        );
         let date_part = &name[5..15];
         assert_eq!(date_part, expected);
     }
