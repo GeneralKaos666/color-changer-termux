@@ -69,7 +69,7 @@ pub fn spawn_reload(tx: Sender<Msg>) {
 /// Capture the shell prompt off the input thread.
 pub fn spawn_prompt(tx: Sender<Msg>) {
     std::thread::spawn(move || {
-        let lines = crate::fonts::prompt::capture_prompt_lines();
+        let lines = crate::fonts::prompt::capture_prompt_lines(None);
         let _ = tx.send(Msg::PromptCaptured(lines));
     });
 }
@@ -83,10 +83,21 @@ pub fn spawn_scan(tx: Sender<Msg>, paths: Paths) {
 }
 
 /// Download and install a font off the input thread.
-pub fn spawn_download(tx: Sender<Msg>, paths: Paths, name: String, _url: String) {
+pub fn spawn_download(tx: Sender<Msg>, paths: Paths, name: String, url: String) {
     std::thread::spawn(move || {
-        let result = crate::fonts::downloader::fetch(&paths, &name, false, None)
-            .map_err(|error| error.to_string());
+        let name_for_progress = name.clone();
+        let progress_tx = tx.clone();
+        let progress = move |received: u64, total: Option<u64>| {
+            let _ = progress_tx.send(Msg::DownloadProgress {
+                name: name_for_progress.clone(),
+                received,
+                total,
+            });
+        };
+        let result = crate::fonts::downloader::download(&url, progress).and_then(|bytes| {
+            crate::fonts::downloader::install_bytes(&paths, &name, &bytes)
+                .map_err(|e| e.to_string())
+        });
         let _ = tx.send(Msg::Downloaded(result));
     });
 }

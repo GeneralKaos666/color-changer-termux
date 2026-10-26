@@ -1,6 +1,7 @@
 //! Screen stack entry points.
 
 pub mod app_theme_editor;
+pub mod font_catalog;
 pub mod fonts_tab;
 pub mod main_menu;
 pub mod preset_picker;
@@ -18,6 +19,7 @@ use crate::ui::Ui;
 use crate::ui::dialog::{Dialog, DialogResult};
 
 use self::app_theme_editor::AppThemeEditor;
+use self::font_catalog::FontCatalog;
 use self::fonts_tab::FontsTab;
 use self::main_menu::MainMenu;
 use self::preset_picker::PresetPicker;
@@ -31,6 +33,7 @@ pub enum ScreenKind {
     Terminal,
     AppTheme,
     FontsTab,
+    FontCatalog,
 }
 
 /// What a screen asks [`crate::app::App`] to do after a key press.
@@ -52,6 +55,8 @@ pub enum ScreenAction {
     RefreshPaletteAndStatus(TerminalColors, String),
     /// Show a modal dialog over the current screen.
     OpenDialog(Dialog),
+    /// Download and install a Nerd Font.
+    SpawnDownload { name: String, url: String },
 }
 
 /// The screens this application can show.
@@ -65,6 +70,8 @@ pub enum Screen {
     /// The `termux.properties` editor.
     AppTheme(Box<AppThemeEditor>),
     FontsTab(FontsTab),
+    /// The Nerd Font download screen.
+    FontCatalog(FontCatalog),
 }
 
 impl Screen {
@@ -76,6 +83,7 @@ impl Screen {
             ScreenKind::Terminal => Some(Self::Terminal(Box::new(TerminalEditor::new(paths)))),
             ScreenKind::AppTheme => Some(Self::AppTheme(Box::new(AppThemeEditor::new(paths)))),
             ScreenKind::FontsTab => Some(Self::FontsTab(FontsTab::new(paths))),
+            ScreenKind::FontCatalog => Some(Self::FontCatalog(FontCatalog::new(paths))),
         }
     }
 
@@ -87,6 +95,7 @@ impl Screen {
             Self::Terminal(screen) => screen.handle_key(key),
             Self::AppTheme(screen) => screen.handle_key(key),
             Self::FontsTab(screen) => screen.handle_key(key, paths),
+            Self::FontCatalog(screen) => screen.handle_key(key, paths),
         }
     }
 
@@ -106,6 +115,7 @@ impl Screen {
             Self::Terminal(_) => "Terminal Colors",
             Self::AppTheme(_) => "App Theme",
             Self::FontsTab(_) => "Fonts",
+            Self::FontCatalog(_) => "Fonts",
         }
     }
 
@@ -117,6 +127,7 @@ impl Screen {
             Self::Terminal(screen) => screen.help(),
             Self::AppTheme(screen) => screen.help(),
             Self::FontsTab(screen) => screen.help(),
+            Self::FontCatalog(screen) => screen.help(),
         }
     }
 
@@ -128,6 +139,7 @@ impl Screen {
             Self::Terminal(screen) => screen.opened(),
             Self::AppTheme(_) => ScreenAction::None,
             Self::FontsTab(screen) => screen.opened(paths),
+            Self::FontCatalog(screen) => screen.opened(paths),
         }
     }
 
@@ -138,6 +150,7 @@ impl Screen {
             Self::AppTheme(screen) => screen.command(command, paths),
             Self::Main(_) | Self::Presets(_) => ScreenAction::None,
             Self::FontsTab(screen) => screen.command(command, paths),
+            Self::FontCatalog(screen) => screen.command(command, paths),
         }
     }
 
@@ -149,6 +162,7 @@ impl Screen {
             Self::Terminal(screen) => screen.on_dialog(result, paths),
             Self::AppTheme(screen) => screen.on_dialog(result, paths),
             Self::FontsTab(screen) => screen.on_dialog(result, paths),
+            Self::FontCatalog(screen) => screen.on_dialog(result, paths),
         }
     }
 
@@ -173,6 +187,7 @@ impl Screen {
     pub fn on_msg(&mut self, msg: &Msg, paths: &Paths) -> ScreenAction {
         match self {
             Self::FontsTab(screen) => screen.on_msg(msg, paths),
+            Self::FontCatalog(screen) => screen.on_msg(msg, paths),
             _ => ScreenAction::None,
         }
     }
@@ -185,6 +200,7 @@ impl Screen {
             Self::Terminal(screen) => screen.render(frame, area, ui),
             Self::AppTheme(screen) => screen.render(frame, area, ui),
             Self::FontsTab(screen) => screen.render(frame, area, ui),
+            Self::FontCatalog(screen) => screen.render(frame, area, ui),
         }
     }
 }

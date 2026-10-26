@@ -13,7 +13,7 @@ use crate::chrome;
 use crate::library::active_colors;
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
-use crate::runtime::Msg;
+use crate::runtime::{Msg, Runtime, spawn_download, spawn_prompt, spawn_scan};
 use crate::screens::{Screen, ScreenAction, ScreenKind};
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
@@ -50,6 +50,7 @@ pub struct App {
     status: Option<(String, Instant)>,
     too_small: bool,
     area: Rect,
+    runtime: Runtime,
     quit: bool,
 }
 
@@ -73,6 +74,7 @@ impl App {
             status: None,
             too_small: false,
             area: Rect::default(),
+            runtime: Runtime::new(),
             quit: false,
             paths,
             glyphs,
@@ -325,6 +327,11 @@ impl App {
         self.quit
     }
 
+    /// Every worker message that has arrived since the last drain.
+    pub fn drain(&self) -> Vec<Msg> {
+        self.runtime.drain()
+    }
+
     /// Restore every screen's uncommitted state, then mark the app as quitting.
     pub fn request_quit(&mut self) {
         let paths = self.paths.clone();
@@ -345,6 +352,10 @@ impl App {
             ScreenAction::None => {}
             ScreenAction::Quit => self.request_quit(),
             ScreenAction::Push(kind) => {
+                if kind == ScreenKind::FontsTab {
+                    spawn_prompt(self.runtime.sender());
+                    spawn_scan(self.runtime.sender(), self.paths.clone());
+                }
                 if let Some(mut screen) = Screen::new(kind, &self.paths) {
                     let action = screen.opened(&self.paths);
                     self.screens.push(screen);
@@ -372,6 +383,9 @@ impl App {
                 self.set_status(&message);
             }
             ScreenAction::OpenDialog(dialog) => self.open_dialog(dialog),
+            ScreenAction::SpawnDownload { name, url } => {
+                spawn_download(self.runtime.sender(), self.paths.clone(), name, url);
+            }
         }
     }
 }

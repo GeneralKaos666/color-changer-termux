@@ -12,7 +12,7 @@ use termux_settings::cli::Args;
 use termux_settings::fonts;
 use termux_settings::model::font_slot::FontSlot;
 use termux_settings::paths::Paths;
-use termux_settings::runtime::{Msg, Runtime, TICK};
+use termux_settings::runtime::{Msg, TICK};
 use termux_settings::terminal;
 use termux_settings::ui::Glyphs;
 
@@ -60,10 +60,9 @@ fn main() -> io::Result<()> {
     let _guard = terminal::Terminal::enter()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
     let mut app = App::with_glyphs(paths, glyphs);
-    let runtime = Runtime::new();
 
     loop {
-        for msg in runtime.drain() {
+        for msg in app.drain() {
             app.update(msg);
         }
         terminal.draw(|frame| app.render(frame))?;
