@@ -10,13 +10,8 @@ use std::path::Path;
 
 use crate::error::Result;
 use crate::model::app_theme::{AppTheme, CURATED_FIELDS};
+use crate::persist::fs::{read_text, write_atomic};
 use crate::persist::properties::{parse_active, set_value, unset_value};
-
-/// Reads `path` as UTF-8 text, replacing bytes that are not valid UTF-8.
-fn read_text(path: &Path) -> Result<String> {
-    let bytes = std::fs::read(path)?;
-    Ok(String::from_utf8_lossy(&bytes).into_owned())
-}
 
 /// Reads the curated keys from `path`, returning an empty theme when missing.
 ///
@@ -78,7 +73,7 @@ pub fn write_app_theme(path: &Path, theme: &AppTheme, preserve: bool) -> Result<
     } else {
         update_theme_text("# Termux properties managed by termux-settings\n", theme)
     };
-    std::fs::write(path, content)?;
+    write_atomic(path, content.as_bytes())?;
     Ok(())
 }
 

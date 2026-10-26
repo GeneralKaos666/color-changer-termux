@@ -11,6 +11,7 @@ use std::path::Path;
 
 use crate::error::Result;
 use crate::model::colors::{ColorField, DEFAULT_PALETTE, PALETTE_KEYS, Rgb, TerminalColors};
+use crate::persist::fs::{read_text, write_atomic};
 use crate::persist::properties::{parse_active, set_value};
 
 /// The `colors.properties` keys this application owns.
@@ -144,17 +145,6 @@ pub fn update_colors_text(text: &str, colors: &TerminalColors) -> String {
     result
 }
 
-/// Reads `path` as UTF-8 text, replacing bytes that are not valid UTF-8.
-///
-/// The file is read as bytes rather than through
-/// [`std::fs::read_to_string`] so a Latin-1 comment cannot stop a colour file
-/// from loading; the replacement matches the Python implementation's
-/// `errors="replace"`.
-fn read_text(path: &Path) -> Result<String> {
-    let bytes = std::fs::read(path)?;
-    Ok(String::from_utf8_lossy(&bytes).into_owned())
-}
-
 /// Reads and parses a colours file, returning defaults when it is absent.
 ///
 /// A missing file is not an error: an installation that has never been
@@ -187,7 +177,7 @@ pub fn write_colors(path: &Path, colors: &TerminalColors, preserve: bool) -> Res
     } else {
         render_colors(colors)
     };
-    std::fs::write(path, content)?;
+    write_atomic(path, content.as_bytes())?;
     Ok(())
 }
 
