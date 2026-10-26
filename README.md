@@ -1,4 +1,4 @@
-# termux-colors
+# termux-settings
 
 A keyboard-driven TUI for [Termux](https://termux.dev) that changes your
 terminal colour scheme and your Termux app theme.
@@ -41,7 +41,7 @@ terminal colour scheme and your Termux app theme.
 
 ### APT (recommended)
 
-`termux-colors` is available from the [flutter-for-termux](https://github.com/GeneralKaos666/flutter-for-termux) apt repository.
+`termux-settings` is available from the [flutter-for-termux](https://github.com/GeneralKaos666/flutter-for-termux) apt repository.
 
 ```sh
 pkg install -y gnupg
@@ -50,37 +50,37 @@ curl -fsSL https://GeneralKaos666.github.io/flutter-for-termux/key.gpg \
   | gpg --dearmor > "$PREFIX/etc/apt/keyrings/flutter.gpg"
 echo "deb [signed-by=$PREFIX/etc/apt/keyrings/flutter.gpg] https://GeneralKaos666.github.io/flutter-for-termux termux main" \
   > "$PREFIX/etc/apt/sources.list.d/flutter.list"
-pkg update && pkg install termux-colors
-termux-colors
+pkg update && pkg install termux-settings
+termux-settings
 ```
 
 ### Release binary
 
 Download the asset that matches your device and install it as
-`$PREFIX/bin/termux-colors`:
+`$PREFIX/bin/termux-settings`:
 
 ```sh
 pkg install curl
-curl -LO https://github.com/GeneralKaos666/color-changer-termux/releases/latest/download/termux-colors-aarch64-linux-android
-install -m 755 termux-colors-aarch64-linux-android "$PREFIX/bin/termux-colors"
+curl -LO https://github.com/GeneralKaos666/termux-settings/releases/latest/download/termux-settings-aarch64-linux-android
+install -m 755 termux-settings-aarch64-linux-android "$PREFIX/bin/termux-settings"
 ```
 
-Use `termux-colors-armv7-linux-androideabi` instead on 32-bit devices
+Use `termux-settings-armv7-linux-androideabi` instead on 32-bit devices
 (`uname -m` prints `armv7l`). Each release also ships a `.sha256` file:
 
 ```sh
-curl -LO https://github.com/GeneralKaos666/color-changer-termux/releases/latest/download/termux-colors-aarch64-linux-android.sha256
-sha256sum -c termux-colors-aarch64-linux-android.sha256
+curl -LO https://github.com/GeneralKaos666/termux-settings/releases/latest/download/termux-settings-aarch64-linux-android.sha256
+sha256sum -c termux-settings-aarch64-linux-android.sha256
 ```
 
 ### From source
 
 ```sh
 pkg install rust git
-git clone https://github.com/GeneralKaos666/color-changer-termux.git
-cd color-changer-termux
+git clone https://github.com/GeneralKaos666/termux-settings.git
+cd termux-settings
 cargo build --release
-install -m 755 target/release/termux-colors "$PREFIX/bin/termux-colors"
+install -m 755 target/release/termux-settings "$PREFIX/bin/termux-settings"
 ```
 
 ### Upgrading from the Python version
@@ -88,7 +88,7 @@ install -m 755 target/release/termux-colors "$PREFIX/bin/termux-colors"
 Remove the old entry point first:
 
 ```sh
-pip uninstall termux-colors
+pip uninstall termux-settings
 ```
 
 Otherwise the Python script in `$PREFIX/bin` keeps shadowing the new binary.
@@ -98,7 +98,7 @@ upgrade.
 ## Usage
 
 ```sh
-termux-colors
+termux-settings
 ```
 
 | Key | Action |
@@ -119,7 +119,7 @@ In Preset Themes, focus the filter box and type to search the library.
 
 ## Relationship to `colors.sh`
 
-`termux-colors` reads the same library as `~/.termux/colors.sh`
+`termux-settings` reads the same library as `~/.termux/colors.sh`
 (`~/.termux/colors/<group>/*.properties`) and activates themes the same way:
 by symlinking `~/.termux/colors.properties` and calling
 `termux-reload-settings`. The two can be used interchangeably. If the library

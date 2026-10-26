@@ -29,16 +29,16 @@ jobs:
           NDK: ${{ steps.ndk.outputs.ndk-path }}
         run: |
           strip="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
-          cp target/aarch64-linux-android/release/termux-colors termux-colors-aarch64-linux-android
-          cp target/armv7-linux-androideabi/release/termux-colors termux-colors-armv7-linux-androideabi
-          "$strip" termux-colors-aarch64-linux-android termux-colors-armv7-linux-androideabi
-          sha256sum termux-colors-aarch64-linux-android > termux-colors-aarch64-linux-android.sha256
-          sha256sum termux-colors-armv7-linux-androideabi > termux-colors-armv7-linux-androideabi.sha256
+          cp target/aarch64-linux-android/release/termux-settings termux-settings-aarch64-linux-android
+          cp target/armv7-linux-androideabi/release/termux-settings termux-settings-armv7-linux-androideabi
+          "$strip" termux-settings-aarch64-linux-android termux-settings-armv7-linux-androideabi
+          sha256sum termux-settings-aarch64-linux-android > termux-settings-aarch64-linux-android.sha256
+          sha256sum termux-settings-armv7-linux-androideabi > termux-settings-armv7-linux-androideabi.sha256
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            termux-colors-aarch64-linux-android
-            termux-colors-aarch64-linux-android.sha256
-            termux-colors-armv7-linux-androideabi
-            termux-colors-armv7-linux-androideabi.sha256
+            termux-settings-aarch64-linux-android
+            termux-settings-aarch64-linux-android.sha256
+            termux-settings-armv7-linux-androideabi
+            termux-settings-armv7-linux-androideabi.sha256
           generate_release_notes: true
