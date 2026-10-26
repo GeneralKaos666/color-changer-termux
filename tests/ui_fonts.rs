@@ -1,6 +1,7 @@
 mod support;
 
 use crossterm::event::KeyCode;
+use std::os::unix::fs::PermissionsExt;
 use support::{key, minimal_ttf, open_fonts, render_text};
 use termux_settings::app::App;
 use termux_settings::model::font_slot::FontSlot;
@@ -114,4 +115,19 @@ fn import_flow_offers_clash_dialog() {
 
     app.resolve_dialog(DialogResult::Confirmed(true));
     assert!(paths.fonts_dir().join("A-1.ttf").exists());
+}
+
+#[test]
+fn unreadable_library_shows_status() {
+    let root = tempfile::tempdir().unwrap().keep();
+    let paths = Paths::new(root);
+    std::fs::create_dir_all(paths.fonts_dir()).unwrap();
+    std::fs::set_permissions(paths.fonts_dir(), std::fs::Permissions::from_mode(0o000)).unwrap();
+
+    let mut app = App::new(paths.clone());
+    open_fonts(&mut app);
+    let rendered = render_text(&mut app, 100, 30);
+    assert!(rendered.contains("unreadable"));
+
+    std::fs::set_permissions(paths.fonts_dir(), std::fs::Permissions::from_mode(0o755)).unwrap();
 }

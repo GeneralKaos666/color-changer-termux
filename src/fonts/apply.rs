@@ -114,7 +114,6 @@ pub fn install_font(paths: &Paths, src: &Path, slot: FontSlot) -> crate::error::
     }
     let _ = ensure_backup_once(paths, &target)?;
     copy_preserving_mode(src, &target)?;
-    let _ = reload_termux();
     Ok(target)
 }
 
@@ -139,7 +138,6 @@ pub fn preview_font(
             slot,
         },
     );
-    let _ = reload_termux();
     Ok(target)
 }
 

@@ -13,7 +13,7 @@ use crate::chrome;
 use crate::library::active_colors;
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
-use crate::runtime::{Msg, Runtime, spawn_download, spawn_prompt, spawn_scan};
+use crate::runtime::{Msg, Runtime, spawn_download, spawn_prompt, spawn_reload, spawn_scan};
 use crate::screens::{Screen, ScreenAction, ScreenKind};
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
@@ -246,6 +246,10 @@ impl App {
             Msg::Tick(now) => self.tick(now),
             Msg::Key(key) => self.handle_key(key),
             Msg::Resize(width, height) => self.set_area(Rect::new(0, 0, width, height)),
+            Msg::Reloaded(false) => {
+                self.set_status("Run termux-reload-settings to refresh.");
+            }
+            Msg::Reloaded(true) => {}
             _ => {
                 let paths = self.paths.clone();
                 if let Some(screen) = self.screens.last_mut() {
@@ -369,13 +373,20 @@ impl App {
                     screen.reload(&self.paths);
                 }
             }
-            ScreenAction::Applied { colors, message } => {
+            ScreenAction::Applied {
+                colors,
+                message,
+                reload,
+            } => {
                 if let Some(colors) = colors {
                     self.colors = colors;
                     self.palette = Palette::from_colors(&self.colors);
                 }
                 if let Some(message) = message {
                     self.set_status(&message);
+                }
+                if reload {
+                    spawn_reload(self.runtime.sender());
                 }
             }
             ScreenAction::OpenDialog(dialog) => self.open_dialog(dialog),

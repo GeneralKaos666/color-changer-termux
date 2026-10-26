@@ -49,10 +49,12 @@ pub enum ScreenAction {
     Pop,
     /// Show a modal dialog over the current screen.
     OpenDialog(Dialog),
-    /// Re-derive the palette from `colors` and/or show `message`.
+    /// Re-derive the palette from `colors`, show `message`, and/or ask the app
+    /// to reload Termux settings on a worker.
     Applied {
         colors: Option<TerminalColors>,
         message: Option<String>,
+        reload: bool,
     },
     /// Download and install a Nerd Font.
     SpawnDownload { name: String, url: String },
@@ -64,6 +66,16 @@ impl ScreenAction {
         Self::Applied {
             colors: None,
             message: Some(msg.to_owned()),
+            reload: false,
+        }
+    }
+
+    /// Show `msg` and trigger an asynchronous `termux-reload-settings`.
+    pub fn status_and_reload(msg: &str) -> Self {
+        Self::Applied {
+            colors: None,
+            message: Some(msg.to_owned()),
+            reload: true,
         }
     }
 
@@ -73,6 +85,7 @@ impl ScreenAction {
         Self::Applied {
             colors: Some(colors),
             message: (!msg.is_empty()).then(|| msg.to_owned()),
+            reload: false,
         }
     }
 }

@@ -13,7 +13,7 @@ use ratatui::widgets::{
 };
 
 use crate::chrome;
-use crate::library::{ThemeRef, active_theme_path, apply_theme, reload_termux, scan_themes};
+use crate::library::{ThemeRef, active_theme_path, apply_theme, scan_themes};
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
 use crate::persist::colors_io::read_colors;
@@ -285,11 +285,7 @@ impl PresetPicker {
             return ScreenAction::status(&format!("theme not found: {}", theme.path.display()));
         }
         self.active = std::fs::canonicalize(&theme.path).ok();
-        let mut message = format!("Saved {}.", theme.label());
-        if !reload_termux() {
-            message.push_str(" Run termux-reload-settings to refresh.");
-        }
-        ScreenAction::status(&message)
+        ScreenAction::status_and_reload(&format!("Saved {}.", theme.label()))
     }
 
     /// Whether `theme` is the one currently linked from `colors.properties`.

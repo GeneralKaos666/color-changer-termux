@@ -45,3 +45,12 @@ fn msg_prompt_updates_the_fonts_tab() {
     let rendered = render_text(&mut app, 100, 30);
     assert!(rendered.contains("$> "));
 }
+
+#[test]
+fn reload_failure_shows_hint() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = App::new(Paths::new(dir.path()));
+    app.update(Msg::Reloaded(false));
+    let rendered = render_text(&mut app, 100, 30);
+    assert!(rendered.contains("termux-reload-settings"));
+}

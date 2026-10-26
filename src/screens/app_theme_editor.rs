@@ -8,7 +8,6 @@ use ratatui::widgets::{Block, Paragraph};
 
 use crate::app::Command;
 use crate::chrome;
-use crate::library::reload_termux;
 use crate::model::app_theme::{AppTheme, CURATED_FIELDS, FieldKind, FieldSpec, validate_value};
 use crate::paths::Paths;
 use crate::persist::backup::make_backup;
@@ -316,11 +315,7 @@ impl AppThemeEditor {
         }
         self.theme = values;
         self.load_rows();
-        let mut message = "Saved termux.properties.".to_owned();
-        if !reload_termux() {
-            message.push_str(" Run termux-reload-settings to refresh.");
-        }
-        ScreenAction::status(&message)
+        ScreenAction::status_and_reload("Saved termux.properties.")
     }
 
     /// Move [`AppThemeEditor::scroll`] the least amount that keeps the focused

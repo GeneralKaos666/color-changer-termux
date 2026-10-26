@@ -31,11 +31,12 @@ pub struct FontsTab {
     session: apply::SessionState,
     prompt: Vec<String>,
     import: Option<PathBuf>,
+    load_error: Option<String>,
 }
 
 impl FontsTab {
     pub fn new(paths: &Paths) -> Self {
-        let entries = scan::list_library(paths).unwrap_or_default();
+        let (entries, load_error) = scan_entries(paths);
         let visible: Vec<usize> = (0..entries.len()).collect();
         let mut state = ListState::default();
         if !visible.is_empty() {
@@ -51,11 +52,14 @@ impl FontsTab {
             session: apply::new_session_state(paths),
             prompt: vec!["$ ".to_owned()],
             import: None,
+            load_error,
         }
     }
 
     pub fn refresh_entries(&mut self, paths: &Paths) {
-        self.entries = scan::list_library(paths).unwrap_or_default();
+        let (entries, load_error) = scan_entries(paths);
+        self.entries = entries;
+        self.load_error = load_error;
         self.visible = (0..self.entries.len()).collect();
         self.state.select((!self.visible.is_empty()).then_some(0));
     }
@@ -136,7 +140,7 @@ impl FontsTab {
                         FontSlot::ALL[self.slot],
                         &mut self.session,
                     ) {
-                        Ok(_) => ScreenAction::status(&format!("Previewing {name}")),
+                        Ok(_) => ScreenAction::status_and_reload(&format!("Previewing {name}")),
                         Err(error) => ScreenAction::status(&format!("Preview failed: {error}")),
                     }
                 } else {
@@ -176,6 +180,9 @@ impl FontsTab {
 
     pub fn opened(&mut self, paths: &Paths) -> ScreenAction {
         self.refresh_entries(paths);
+        if let Some(error) = &self.load_error {
+            return ScreenAction::status(&format!("Font library unreadable: {error}"));
+        }
         ScreenAction::None
     }
     pub fn command(&mut self, _command: Command, _paths: &Paths) -> ScreenAction {
@@ -239,11 +246,18 @@ impl FontsTab {
             }
             Msg::FontsScanned(Ok(entries)) => {
                 self.entries = entries.clone();
+                self.load_error = None;
                 self.visible = (0..self.entries.len()).collect();
                 if !self.visible.is_empty() && self.state.selected().is_none() {
                     self.state.select(Some(0));
                 }
                 ScreenAction::None
+            }
+            Msg::FontsScanned(Err(error)) => {
+                self.entries.clear();
+                self.visible.clear();
+                self.load_error = Some(error.to_string());
+                ScreenAction::status(&format!("Font library unreadable: {error}"))
             }
             _ => ScreenAction::None,
         }
@@ -351,5 +365,14 @@ impl FontsTab {
             );
         let mut list_state = self.state.clone();
         frame.render_stateful_widget(list, list_area, &mut list_state);
+    }
+}
+
+/// Scan the font library, distinguishing an unreadable directory from an empty
+/// one so the screen can tell the user rather than showing a blank list.
+fn scan_entries(paths: &Paths) -> (Vec<scan::FontEntry>, Option<String>) {
+    match scan::list_library(paths) {
+        Ok(entries) => (entries, None),
+        Err(error) => (Vec::new(), Some(error.to_string())),
     }
 }

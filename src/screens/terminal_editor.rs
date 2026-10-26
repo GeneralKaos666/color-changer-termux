@@ -10,7 +10,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Paragraph};
 
 use crate::app::Command;
-use crate::library::{active_theme_path, apply_theme, reload_termux};
+use crate::library::{active_theme_path, apply_theme};
 use crate::model::colors::{ColorField, PALETTE_SIZE, Rgb, TerminalColors};
 use crate::paths::Paths;
 use crate::persist::backup::make_backup;
@@ -360,11 +360,7 @@ impl TerminalEditor {
             .file_name()
             .map(|name| name.to_string_lossy().into_owned())
             .unwrap_or_else(|| target.display().to_string());
-        let mut message = format!("Saved {name}.");
-        if !reload_termux() {
-            message.push_str(" Run termux-reload-settings to refresh.");
-        }
-        ScreenAction::status(&message)
+        ScreenAction::status_and_reload(&format!("Saved {name}."))
     }
 
     /// The form row holding field `index`.

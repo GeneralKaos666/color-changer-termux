@@ -95,6 +95,9 @@ pub fn run(args: Args, paths: &Paths) -> Result<ExitCode> {
             .find(|e| e.name == *name || e.name.to_lowercase() == name.to_lowercase())
         {
             fonts::apply::install_font(paths, &entry.path, slot)?;
+            if !crate::library::reload_termux() {
+                eprintln!("{}", crate::fonts::apply::MANUAL_RESTART_HINT);
+            }
             println!(
                 "Applied {} to {} ({})",
                 entry.name,
