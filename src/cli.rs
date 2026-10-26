@@ -1,4 +1,4 @@
-//! Command-line argument parsing for termux-colors.
+//! Command-line argument parsing for termux-settings.
 
 use std::env;
 
@@ -36,7 +36,8 @@ impl Args {
                 _ => {}
             }
         }
-        if env::var("TERMUX_COLORS_ASCII").is_ok_and(|v| v != "0")
+        if env::var("TERMUX_SETTINGS_ASCII").is_ok_and(|v| v != "0")
+            || env::var("TERMUX_COLORS_ASCII").is_ok_and(|v| v != "0")
             || env::var("FONT_CHANGER_ASCII").is_ok_and(|v| v != "0")
         {
             args.ascii = true;

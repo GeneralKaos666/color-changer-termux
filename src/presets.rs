@@ -25,7 +25,7 @@ fn colors(background: &str, foreground: &str, cursor: &str, palette: [&str; 16])
 /// The six fallback themes shipped with the application, in display order.
 ///
 /// Every value is copied verbatim from the Python authority
-/// (`termux_colors/presets/built_in.py`).
+/// (`termux_settings/presets/built_in.py`).
 pub fn built_in() -> Vec<(&'static str, TerminalColors)> {
     vec![
         (

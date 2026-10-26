@@ -2,8 +2,8 @@ mod support;
 
 use crossterm::event::KeyCode;
 use support::{editor_app, editor_with, focus_background_cleared, key, open_editor, render_text};
-use termux_colors::app::App;
-use termux_colors::paths::Paths;
+use termux_settings::app::App;
+use termux_settings::paths::Paths;
 
 #[test]
 fn fields_initialise_from_the_active_theme() {

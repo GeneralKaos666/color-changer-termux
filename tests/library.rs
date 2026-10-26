@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use termux_colors::library::{active_theme_path, apply_theme, reload_with_path_env, scan_themes};
+use termux_settings::library::{active_theme_path, apply_theme, reload_with_path_env, scan_themes};
 
 const BODY: &str = "background=#000000\n";
 

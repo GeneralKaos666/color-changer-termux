@@ -63,7 +63,7 @@ pub fn update_theme_text(text: &str, theme: &AppTheme) -> String {
 ///
 /// When `preserve` is true and the file already exists, its current text is
 /// updated with [`update_theme_text`] so comments and unrelated keys survive;
-/// otherwise the file starts from the termux-colors header comment. The write
+/// otherwise the file starts from the termux-settings header comment. The write
 /// follows symlinks, so writing a `termux.properties` link edits the file it
 /// points at and leaves the link in place.
 pub fn write_app_theme(path: &Path, theme: &AppTheme, preserve: bool) -> Result<()> {
@@ -76,7 +76,7 @@ pub fn write_app_theme(path: &Path, theme: &AppTheme, preserve: bool) -> Result<
     let content = if preserve && path.exists() {
         update_theme_text(&read_text(path)?, theme)
     } else {
-        update_theme_text("# Termux properties managed by termux-colors\n", theme)
+        update_theme_text("# Termux properties managed by termux-settings\n", theme)
     };
     std::fs::write(path, content)?;
     Ok(())
@@ -150,7 +150,7 @@ mod tests {
         write_app_theme(&path, &theme, true).unwrap();
         assert_eq!(
             std::fs::read_to_string(&path).unwrap(),
-            "# Termux properties managed by termux-colors\nuse-black-ui=true\n"
+            "# Termux properties managed by termux-settings\nuse-black-ui=true\n"
         );
     }
 }

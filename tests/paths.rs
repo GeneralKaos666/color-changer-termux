@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use termux_colors::paths::Paths;
+use termux_settings::paths::Paths;
 
 #[test]
 fn accessors_join_under_root() {

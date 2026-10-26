@@ -1,9 +1,9 @@
 mod support;
 
 use support::{editor_with_active, editor_with_colors, render_text, save_as, set_field};
-use termux_colors::app::Command;
-use termux_colors::screens::terminal_editor::sanitize_name;
-use termux_colors::ui::dialog::{Dialog, DialogResult};
+use termux_settings::app::Command;
+use termux_settings::screens::terminal_editor::sanitize_name;
+use termux_settings::ui::dialog::{Dialog, DialogResult};
 
 #[test]
 fn sanitize_replaces_unsafe_runs() {

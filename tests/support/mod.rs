@@ -7,14 +7,14 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
-use termux_colors::app::{App, Command};
-use termux_colors::model::app_theme::validate_value;
-use termux_colors::paths::Paths;
-use termux_colors::screens::Screen;
-use termux_colors::screens::app_theme_editor::AppThemeEditor;
-use termux_colors::screens::preset_picker::PresetPicker;
-use termux_colors::screens::terminal_editor::TerminalEditor;
-use termux_colors::ui::dialog::DialogResult;
+use termux_settings::app::{App, Command};
+use termux_settings::model::app_theme::validate_value;
+use termux_settings::paths::Paths;
+use termux_settings::screens::Screen;
+use termux_settings::screens::app_theme_editor::AppThemeEditor;
+use termux_settings::screens::preset_picker::PresetPicker;
+use termux_settings::screens::terminal_editor::TerminalEditor;
+use termux_settings::ui::dialog::DialogResult;
 
 /// Build a plain key press.
 pub fn key(code: KeyCode) -> KeyEvent {
@@ -65,7 +65,7 @@ pub fn picker_with(names: &[&str]) -> PresetPicker {
 /// The path of the theme the picker currently highlights.
 pub fn picker_theme_path(app: &mut App) -> std::path::PathBuf {
     match app.current() {
-        termux_colors::screens::Screen::Presets(picker) => {
+        termux_settings::screens::Screen::Presets(picker) => {
             picker.selected().expect("a theme is selected").path.clone()
         }
         _ => panic!("the picker is not the current screen"),

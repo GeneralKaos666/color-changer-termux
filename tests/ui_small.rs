@@ -3,8 +3,8 @@ mod support;
 use std::time::{Duration, Instant};
 
 use support::{ctrl, render_text};
-use termux_colors::app::App;
-use termux_colors::paths::Paths;
+use termux_settings::app::App;
+use termux_settings::paths::Paths;
 
 #[test]
 fn tiny_terminals_get_a_guard_not_a_panic() {

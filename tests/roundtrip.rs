@@ -1,5 +1,5 @@
-use termux_colors::persist::colors_io::{read_colors, write_colors};
-use termux_colors::persist::theme_io::{read_app_theme, write_app_theme};
+use termux_settings::persist::colors_io::{read_colors, write_colors};
+use termux_settings::persist::theme_io::{read_app_theme, write_app_theme};
 
 #[test]
 fn colors_round_trip_matches_the_expected_file() {

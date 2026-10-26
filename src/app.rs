@@ -185,7 +185,7 @@ impl App {
     /// Draw the one-row breadcrumb header shown above sub-screens.
     fn render_header(&self, frame: &mut Frame, area: Rect) {
         let line = Line::from(vec![
-            Span::styled(" termux-colors", Style::default().fg(self.palette.muted)),
+            Span::styled(" termux-settings", Style::default().fg(self.palette.muted)),
             Span::styled(" › ", Style::default().fg(self.palette.muted)),
             Span::styled(
                 self.current().title(),

@@ -1,9 +1,9 @@
 mod support;
 
 use support::{app_theme_with, open_app_theme, render_text, set_row};
-use termux_colors::app::{App, Command};
-use termux_colors::paths::Paths;
-use termux_colors::ui::dialog::DialogResult;
+use termux_settings::app::{App, Command};
+use termux_settings::paths::Paths;
+use termux_settings::ui::dialog::DialogResult;
 
 #[test]
 fn rows_initialise_from_the_file_in_schema_order() {

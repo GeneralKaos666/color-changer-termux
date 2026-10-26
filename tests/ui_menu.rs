@@ -2,8 +2,8 @@ mod support;
 
 use crossterm::event::KeyCode;
 use support::{ctrl, key, render_text};
-use termux_colors::app::App;
-use termux_colors::paths::Paths;
+use termux_settings::app::App;
+use termux_settings::paths::Paths;
 
 #[test]
 fn menu_renders_its_four_items_and_active_theme() {

@@ -7,19 +7,19 @@ use crossterm::event::{self, Event, KeyEventKind};
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 
-use termux_colors::app::App;
-use termux_colors::cli::Args;
-use termux_colors::fonts;
-use termux_colors::paths::Paths;
-use termux_colors::terminal;
+use termux_settings::app::App;
+use termux_settings::cli::Args;
+use termux_settings::fonts;
+use termux_settings::paths::Paths;
+use termux_settings::terminal;
 
 fn main() -> io::Result<()> {
     let args = Args::parse();
     if args.ascii {
-        termux_colors::ui::ascii::set_ascii(true);
+        termux_settings::ui::ascii::set_ascii(true);
     }
     if args.version {
-        println!("termux-colors {}", env!("CARGO_PKG_VERSION"));
+        println!("termux-settings {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
     let paths = Paths::from_env();

@@ -1,10 +1,10 @@
 mod support;
 
 use support::{key, open_picker, picker_theme_path, picker_with, render_text};
-use termux_colors::app::App;
-use termux_colors::paths::Paths;
-use termux_colors::screens::preset_picker::load_themes;
-use termux_colors::ui::focus::{Move, list_move};
+use termux_settings::app::App;
+use termux_settings::paths::Paths;
+use termux_settings::screens::preset_picker::load_themes;
+use termux_settings::ui::focus::{Move, list_move};
 
 #[test]
 fn empty_library_is_seeded_with_builtins() {
@@ -69,7 +69,7 @@ fn escape_returns_to_the_menu() {
 #[test]
 fn moving_the_selection_retints_the_ui() {
     use ratatui::style::Color;
-    use termux_colors::paths::Paths;
+    use termux_settings::paths::Paths;
 
     let dir = tempfile::tempdir().unwrap();
     let mut app = App::new(Paths::new(dir.path()));

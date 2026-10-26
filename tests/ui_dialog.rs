@@ -2,9 +2,9 @@ mod support;
 
 use crossterm::event::KeyCode;
 use support::{key, render_text};
-use termux_colors::app::App;
-use termux_colors::paths::Paths;
-use termux_colors::ui::dialog::{Dialog, DialogResult};
+use termux_settings::app::App;
+use termux_settings::paths::Paths;
+use termux_settings::ui::dialog::{Dialog, DialogResult};
 
 #[test]
 fn confirm_enter_is_true_and_esc_is_false() {
