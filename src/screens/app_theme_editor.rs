@@ -3,10 +3,11 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::widgets::{Block, BorderType, Paragraph};
 
 use crate::app::Command;
+use crate::chrome;
 use crate::library::reload_termux;
 use crate::model::app_theme::{AppTheme, CURATED_FIELDS, FieldKind, FieldSpec, validate_value};
 use crate::paths::Paths;
@@ -16,6 +17,7 @@ use crate::screens::ScreenAction;
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
 use crate::ui::form;
+use crate::ui::glyphs;
 use crate::ui::input::Field;
 
 /// Form rows the editor assumes are visible until the first render measures
@@ -314,7 +316,8 @@ impl AppThemeEditor {
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
             .title(" app theme")
-            .border_style(Style::default().fg(palette.primary))
+            .title_alignment(Alignment::Left)
+            .border_style(Style::default().fg(chrome::accent(palette.dark)))
             .style(Style::default().bg(palette.surface));
         let inner = block.inner(area);
         frame.render_widget(block, area);
@@ -414,14 +417,17 @@ fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, palet
     let control_style = if row.invalid {
         Style::default().fg(palette.error).bg(palette.boost)
     } else if focused {
-        Style::default().fg(palette.background).bg(palette.primary)
+        Style::default()
+            .fg(Color::White)
+            .bg(chrome::accent(palette.dark))
     } else {
         Style::default().fg(palette.foreground).bg(palette.boost)
     };
     if row.is_selector() {
         let current = row.value.clone().unwrap_or_else(|| "unset".to_owned());
         frame.render_widget(
-            Paragraph::new(format!("‹ {current} ›")).style(control_style),
+            Paragraph::new(format!("{} {current} {}", glyphs::chip().0, glyphs::chip().1))
+                .style(control_style),
             control_area,
         );
     } else {
