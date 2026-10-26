@@ -1,5 +1,5 @@
-//! Pure text building: the banner wordmark, palette strip, swatch grid and
-//! the mock shell session.
+//! Pure text building: the palette strip, swatch grid and the mock shell
+//! session.
 //!
 //! Every function returns owned [`Line`]/[`Span`] values with explicit
 //! [`Color::Rgb`] styles, ported from the Python authority's `widgets.py`.
@@ -9,20 +9,6 @@ use ratatui::text::{Line, Span};
 
 use crate::model::colors::{Rgb, TerminalColors};
 use crate::theme::{ensure_contrast, relative_luminance};
-
-/// A minimal 6x5 block font, only the glyphs used by the wordmark.
-const GLYPHS: [(char, [&str; 5]); 10] = [
-    ('T', ["██████", "  ██  ", "  ██  ", "  ██  ", "  ██  "]),
-    ('E', ["██████", "██    ", "████  ", "██    ", "██████"]),
-    ('R', ["█████ ", "██  ██", "█████ ", "██ ██ ", "██  ██"]),
-    ('M', ["██   ██", "███ ███", "██ █ ██", "██   ██", "██   ██"]),
-    ('U', ["██  ██", "██  ██", "██  ██", "██  ██", "██████"]),
-    ('X', ["██  ██", " ████ ", "  ██  ", " ████ ", "██  ██"]),
-    ('C', [" █████", "██    ", "██    ", "██    ", " █████"]),
-    ('O', [" ████ ", "██  ██", "██  ██", "██  ██", " ████ "]),
-    ('L', ["██    ", "██    ", "██    ", "██    ", "██████"]),
-    ('S', [" █████", "██    ", " ████ ", "    ██", "█████ "]),
-];
 
 /// Return black or white, whichever reads better on `color`.
 ///
@@ -39,37 +25,6 @@ pub fn contrast_color(color: Rgb) -> Rgb {
 /// A small inline colour chip, `width` cells wide.
 pub fn swatch(color: Rgb, width: usize) -> Span<'static> {
     Span::styled(" ".repeat(width), Style::default().bg(rgb(color)))
-}
-
-/// The "TERMUX COLORS" wordmark in the palette's colours.
-///
-/// `compact` shows just "TERMUX"; `stacked` puts the two words on separate
-/// rows; otherwise they share one row when the width allows it.
-pub fn banner(
-    colors: &TerminalColors,
-    width: u16,
-    stacked: bool,
-    compact: bool,
-) -> Vec<Line<'static>> {
-    if compact {
-        return word("TERMUX", colors, 0);
-    }
-    if stacked || width < 88 {
-        let mut top = word("TERMUX", colors, 0);
-        top.extend(word("COLORS", colors, 6));
-        return top;
-    }
-    let top = word("TERMUX", colors, 0);
-    let right = word("COLORS", colors, 6);
-    top.into_iter()
-        .zip(right)
-        .map(|(left, right)| {
-            let mut spans = left.spans;
-            spans.push(Span::raw("  "));
-            spans.extend(right.spans);
-            Line::from(spans)
-        })
-        .collect()
 }
 
 /// A single-line strip of the 16 palette colours, three cells each.
@@ -187,38 +142,6 @@ pub fn mock_session(colors: &TerminalColors) -> Vec<Line<'static>> {
     vec![prompt, listing, git, branch, clean, tests, error]
 }
 
-/// Render one word of the wordmark as five rows of styled spans.
-///
-/// Each letter is coloured by `ensure_contrast` of the palette entry at
-/// `(index + offset) % 16`, matching the Python `_word`.
-fn word(word: &str, colors: &TerminalColors, offset: usize) -> Vec<Line<'static>> {
-    let mut rows = vec![Vec::new(); 5];
-    for (index, letter) in word.chars().enumerate() {
-        let Some(glyph) = glyph(letter) else {
-            continue;
-        };
-        let color = ensure_contrast(
-            colors.palette[(index + offset) % colors.palette.len()],
-            colors.background,
-            3.0,
-        );
-        for (row, pattern) in glyph.iter().enumerate() {
-            rows[row].push(bold(pattern, color));
-            rows[row].push(Span::raw(" "));
-        }
-    }
-    rows.into_iter().map(Line::from).collect()
-}
-
-/// The five block-font rows for `letter`, or [`None`] when it has no glyph.
-fn glyph(letter: char) -> Option<[&'static str; 5]> {
-    let upper = letter.to_ascii_uppercase();
-    GLYPHS
-        .iter()
-        .find(|(key, _)| *key == upper)
-        .map(|(_, rows)| *rows)
-}
-
 /// A foreground-coloured span, optionally bold.
 fn plain(content: &'static str, color: Rgb) -> Span<'static> {
     Span::styled(content, Style::default().fg(rgb(color)))
@@ -252,15 +175,6 @@ mod tests {
             })
             .collect::<Vec<_>>()
             .join("\n")
-    }
-
-    #[test]
-    fn banner_has_five_rows_unstacked_and_ten_stacked() {
-        let c = TerminalColors::default();
-        assert_eq!(banner(&c, 100, false, false).len(), 5);
-        assert_eq!(banner(&c, 60, true, false).len(), 10);
-        assert_eq!(banner(&c, 40, false, true).len(), 5);
-        assert!(all_text(&banner(&c, 100, false, false)).contains("█"));
     }
 
     #[test]

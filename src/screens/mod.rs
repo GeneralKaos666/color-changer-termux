@@ -1,8 +1,6 @@
 //! Screen stack entry points.
 
 pub mod app_theme_editor;
-pub mod app_theme_tab;
-pub mod colors_tab;
 pub mod fonts_tab;
 pub mod main_menu;
 pub mod preset_picker;
@@ -19,8 +17,6 @@ use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
 
 use self::app_theme_editor::AppThemeEditor;
-use self::app_theme_tab::AppThemeTab;
-use self::colors_tab::ColorsTab;
 use self::fonts_tab::FontsTab;
 use self::main_menu::MainMenu;
 use self::preset_picker::PresetPicker;
@@ -33,9 +29,7 @@ pub enum ScreenKind {
     Presets,
     Terminal,
     AppTheme,
-    ColorsTab,
     FontsTab,
-    AppThemeTab,
 }
 
 /// What a screen asks [`crate::app::App`] to do after a key press.
@@ -69,9 +63,7 @@ pub enum Screen {
     Terminal(Box<TerminalEditor>),
     /// The `termux.properties` editor.
     AppTheme(Box<AppThemeEditor>),
-    ColorsTab(ColorsTab),
     FontsTab(FontsTab),
-    AppThemeTab(Box<AppThemeTab>),
 }
 
 impl Screen {
@@ -82,9 +74,7 @@ impl Screen {
             ScreenKind::Presets => Some(Self::Presets(PresetPicker::new(paths))),
             ScreenKind::Terminal => Some(Self::Terminal(Box::new(TerminalEditor::new(paths)))),
             ScreenKind::AppTheme => Some(Self::AppTheme(Box::new(AppThemeEditor::new(paths)))),
-            ScreenKind::ColorsTab => Some(Self::ColorsTab(ColorsTab::new(paths))),
             ScreenKind::FontsTab => Some(Self::FontsTab(FontsTab::new(paths))),
-            ScreenKind::AppThemeTab => Some(Self::AppThemeTab(Box::new(AppThemeTab::new(paths)))),
         }
     }
 
@@ -95,9 +85,7 @@ impl Screen {
             Self::Presets(screen) => screen.handle_key(key, paths),
             Self::Terminal(screen) => screen.handle_key(key),
             Self::AppTheme(screen) => screen.handle_key(key),
-            Self::ColorsTab(screen) => screen.handle_key(key, paths),
             Self::FontsTab(screen) => screen.handle_key(key, paths),
-            Self::AppThemeTab(screen) => screen.handle_key(key, paths),
         }
     }
 
@@ -116,9 +104,7 @@ impl Screen {
             Self::Presets(_) => "Preset Themes",
             Self::Terminal(_) => "Terminal Colors",
             Self::AppTheme(_) => "App Theme",
-            Self::ColorsTab(_) => "Colors",
             Self::FontsTab(_) => "Fonts",
-            Self::AppThemeTab(_) => "App Theme",
         }
     }
 
@@ -129,9 +115,7 @@ impl Screen {
             Self::Presets(screen) => screen.help(),
             Self::Terminal(screen) => screen.help(),
             Self::AppTheme(screen) => screen.help(),
-            Self::ColorsTab(screen) => screen.help(),
             Self::FontsTab(screen) => screen.help(),
-            Self::AppThemeTab(screen) => screen.help(),
         }
     }
 
@@ -142,9 +126,7 @@ impl Screen {
             Self::Presets(screen) => screen.opened(paths),
             Self::Terminal(screen) => screen.opened(),
             Self::AppTheme(_) => ScreenAction::None,
-            Self::ColorsTab(screen) => screen.opened(paths),
             Self::FontsTab(screen) => screen.opened(paths),
-            Self::AppThemeTab(screen) => screen.opened(paths),
         }
     }
 
@@ -154,9 +136,7 @@ impl Screen {
             Self::Terminal(screen) => screen.command(command, paths),
             Self::AppTheme(screen) => screen.command(command, paths),
             Self::Main(_) | Self::Presets(_) => ScreenAction::None,
-            Self::ColorsTab(screen) => screen.command(command, paths),
             Self::FontsTab(screen) => screen.command(command, paths),
-            Self::AppThemeTab(screen) => screen.command(command, paths),
         }
     }
 
@@ -167,9 +147,7 @@ impl Screen {
             Self::Presets(_) => ScreenAction::None,
             Self::Terminal(screen) => screen.on_dialog(result, paths),
             Self::AppTheme(screen) => screen.on_dialog(result, paths),
-            Self::ColorsTab(screen) => screen.on_dialog(result, paths),
             Self::FontsTab(screen) => screen.on_dialog(result, paths),
-            Self::AppThemeTab(screen) => screen.on_dialog(result, paths),
         }
     }
 
@@ -180,9 +158,7 @@ impl Screen {
             Self::Presets(screen) => screen.render(frame, area, palette),
             Self::Terminal(screen) => screen.render(frame, area, palette),
             Self::AppTheme(screen) => screen.render(frame, area, palette),
-            Self::ColorsTab(screen) => screen.render(frame, area, palette),
             Self::FontsTab(screen) => screen.render(frame, area, palette),
-            Self::AppThemeTab(screen) => screen.render(frame, area, palette),
         }
     }
 }

@@ -169,7 +169,6 @@ pub fn app_theme_with(contents: &str) -> (App, Paths) {
 pub fn app_theme_mut(app: &mut App) -> &mut AppThemeEditor {
     match app.current_mut() {
         Screen::AppTheme(editor) => editor,
-        Screen::AppThemeTab(tab) => &mut tab.inner,
         _ => panic!("the app theme editor is not the current screen"),
     }
 }

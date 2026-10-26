@@ -1,4 +1,4 @@
-//! The landing screen: banner, status and a four-item menu.
+//! The landing screen: hero, status and a four-item menu.
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
@@ -108,7 +108,7 @@ impl MainMenu {
         ]
     }
 
-    /// Draw the banner, status line and menu box.
+    /// Draw the hero, status line and menu box.
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         frame.render_widget(
             Block::default().style(
