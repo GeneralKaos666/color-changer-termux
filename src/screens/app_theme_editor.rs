@@ -4,7 +4,6 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
-use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Paragraph};
 
 use crate::app::Command;
@@ -133,6 +132,17 @@ impl AppThemeEditor {
             Command::Revert => self.start_revert(paths),
             Command::SaveAs => ScreenAction::None,
         }
+    }
+
+    /// The key bindings the help bar shows for this screen.
+    pub fn help(&self) -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("↑/↓", "field"),
+            ("←/→", "cycle"),
+            ("ctrl+s", "save"),
+            ("ctrl+r", "revert"),
+            ("Esc", "back"),
+        ]
     }
 
     /// Write the validated values, asking for a backup when the file exists.
@@ -296,10 +306,7 @@ impl AppThemeEditor {
             ),
             area,
         );
-        let [body, actions] =
-            Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).areas(area);
-        self.render_form(frame, body, palette);
-        render_actions(frame, actions, palette);
+        self.render_form(frame, area, palette);
     }
 
     /// Draw the scrolling form of section rules and labelled rows.
@@ -434,31 +441,4 @@ fn render_row(frame: &mut Frame, area: Rect, row: &mut Row, focused: bool, palet
             key_area,
         );
     }
-}
-
-/// Draw the action row: Save, Revert and Back.
-fn render_actions(frame: &mut Frame, area: Rect, palette: &Palette) {
-    let block = Block::bordered()
-        .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(palette.secondary))
-        .style(Style::default().bg(palette.surface));
-    let inner = block.inner(area);
-    frame.render_widget(block, area);
-    if inner.width == 0 || inner.height == 0 {
-        return;
-    }
-    let line = Line::from(vec![
-        Span::styled(
-            " ctrl+s Save ",
-            Style::default()
-                .fg(palette.background)
-                .bg(palette.primary)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::raw("  "),
-        Span::styled("ctrl+r Revert", Style::default().fg(palette.foreground)),
-        Span::raw("  "),
-        Span::styled("esc Back", Style::default().fg(palette.muted)),
-    ]);
-    frame.render_widget(Paragraph::new(line), inner);
 }

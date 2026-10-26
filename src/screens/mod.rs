@@ -122,6 +122,19 @@ impl Screen {
         }
     }
 
+    /// The key bindings the help bar shows for the current screen.
+    pub fn help(&self) -> Vec<(&'static str, &'static str)> {
+        match self {
+            Self::Main(screen) => screen.help(),
+            Self::Presets(screen) => screen.help(),
+            Self::Terminal(screen) => screen.help(),
+            Self::AppTheme(screen) => screen.help(),
+            Self::ColorsTab(screen) => screen.help(),
+            Self::FontsTab(screen) => screen.help(),
+            Self::AppThemeTab(screen) => screen.help(),
+        }
+    }
+
     /// The action a freshly pushed screen wants the app to apply.
     pub fn opened(&mut self, paths: &Paths) -> ScreenAction {
         match self {

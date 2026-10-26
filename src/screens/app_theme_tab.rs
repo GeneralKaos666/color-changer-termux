@@ -33,6 +33,10 @@ impl AppThemeTab {
         self.inner.on_dialog(result, paths)
     }
 
+    pub fn help(&self) -> Vec<(&'static str, &'static str)> {
+        self.inner.help()
+    }
+
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         self.inner.render(frame, area, palette);
     }

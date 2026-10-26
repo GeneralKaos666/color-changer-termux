@@ -148,6 +148,19 @@ impl PresetPicker {
         }
     }
 
+    /// The key bindings the help bar shows for this screen, by focus.
+    pub fn help(&self) -> Vec<(&'static str, &'static str)> {
+        match self.focus {
+            Focus::List => vec![
+                ("↑/↓", "move"),
+                ("Enter", "apply"),
+                ("r", "reload"),
+                ("Tab", "filter"),
+            ],
+            Focus::Filter => vec![("type", "filter"), ("Enter", "done"), ("Esc", "clear")],
+        }
+    }
+
     /// Handle a key press, returning the action the app should apply.
     pub fn handle_key(&mut self, key: KeyEvent, paths: &Paths) -> ScreenAction {
         match key.code {

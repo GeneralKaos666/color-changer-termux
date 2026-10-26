@@ -68,6 +68,10 @@ impl ColorsTab {
         ScreenAction::None
     }
 
+    pub fn help(&self) -> Vec<(&'static str, &'static str)> {
+        Vec::new()
+    }
+
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         let colors = TerminalColors {
             background: crate::model::colors::Rgb::new(0, 0, 0),

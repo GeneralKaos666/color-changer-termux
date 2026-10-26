@@ -137,6 +137,18 @@ impl TerminalEditor {
         ScreenAction::RefreshPalette(self.current_colors())
     }
 
+    /// The key bindings the help bar shows for this screen.
+    pub fn help(&self) -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("↑/↓", "field"),
+            ("Tab", "next"),
+            ("ctrl+s", "save"),
+            ("ctrl+a", "save as"),
+            ("ctrl+r", "revert"),
+            ("Esc", "back"),
+        ]
+    }
+
     /// Handle a key press, returning the action the app should apply.
     pub fn handle_key(&mut self, key: KeyEvent) -> ScreenAction {
         match key.code {
@@ -399,15 +411,12 @@ impl TerminalEditor {
             ),
             area,
         );
-        let [body, actions] =
-            Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).areas(area);
         let [form_area, preview_area] =
             Layout::horizontal([Constraint::Percentage(52), Constraint::Percentage(48)])
                 .spacing(1)
-                .areas(body);
+                .areas(area);
         self.render_form(frame, form_area, palette);
         self.render_preview(frame, preview_area, palette);
-        render_actions(frame, actions, palette);
     }
 
     /// Draw the scrolling form of labelled fields.
@@ -497,33 +506,4 @@ fn backup_question() -> ScreenAction {
         "Back up",
         "Skip",
     ))
-}
-
-/// Draw the action row: Save, Save As…, Revert and Back.
-fn render_actions(frame: &mut Frame, area: Rect, palette: &Palette) {
-    let block = Block::bordered()
-        .border_type(BorderType::Rounded)
-        .border_style(Style::default().fg(palette.secondary))
-        .style(Style::default().bg(palette.surface));
-    let inner = block.inner(area);
-    frame.render_widget(block, area);
-    if inner.width == 0 || inner.height == 0 {
-        return;
-    }
-    let line = Line::from(vec![
-        Span::styled(
-            " ctrl+s Save ",
-            Style::default()
-                .fg(palette.background)
-                .bg(palette.primary)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::raw("  "),
-        Span::styled("ctrl+a Save As…", Style::default().fg(palette.foreground)),
-        Span::raw("  "),
-        Span::styled("ctrl+r Revert", Style::default().fg(palette.foreground)),
-        Span::raw("  "),
-        Span::styled("esc Back", Style::default().fg(palette.muted)),
-    ]);
-    frame.render_widget(Paragraph::new(line), inner);
 }

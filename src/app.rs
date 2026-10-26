@@ -9,6 +9,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Paragraph};
 
+use crate::chrome;
 use crate::library::active_colors;
 use crate::model::colors::TerminalColors;
 use crate::paths::Paths;
@@ -143,27 +144,47 @@ impl App {
             self.render_too_small(frame, area);
             return;
         }
-        let at_menu = self.screens.len() == 1;
-        let (header, content) = if at_menu {
-            (None, area)
-        } else {
-            let [header_area, content_area] =
-                Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).areas(area);
-            (Some(header_area), content_area)
-        };
-        if let Some(header) = header {
-            self.render_header(frame, header);
-        }
+        let [header_area, content_area, footer_area] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(1),
+        ])
+        .areas(area);
+        self.render_header(frame, header_area);
         if let Some(screen) = self.screens.last_mut() {
-            screen.render(frame, content, &self.palette);
+            screen.render(frame, content_area, &self.palette);
         }
+        self.render_footer(frame, footer_area);
+        if let Some(dialog) = &self.dialog {
+            let palette = self.palette.clone();
+            let buffer = frame.buffer_mut();
+            dialog.render(area, buffer, &palette);
+        }
+    }
+
+    /// Draw the one-row header: the gradient title and, on sub-screens, the
+    /// breadcrumb section.
+    fn render_header(&self, frame: &mut Frame, area: Rect) {
+        let mut spans = chrome::gradient_title("termux-settings", self.palette.dark);
+        if self.screens.len() > 1 {
+            spans.push(Span::styled(" › ", Style::default().fg(self.palette.muted)));
+            spans.push(Span::styled(
+                self.current().title(),
+                Style::default()
+                    .fg(chrome::accent(self.palette.dark))
+                    .add_modifier(Modifier::BOLD),
+            ));
+        }
+        frame.render_widget(
+            Paragraph::new(Line::from(spans)).style(Style::default().bg(self.palette.panel)),
+            area,
+        );
+    }
+
+    /// Draw the bottom row: the status message when set, otherwise the
+    /// context-sensitive help bar.
+    fn render_footer(&self, frame: &mut Frame, area: Rect) {
         if let Some((message, _)) = &self.status {
-            let row = Rect {
-                x: area.x,
-                y: area.y + area.height.saturating_sub(1),
-                width: area.width,
-                height: u16::from(area.height > 0),
-            };
             frame.render_widget(
                 Paragraph::new(message.as_str())
                     .alignment(Alignment::Center)
@@ -172,32 +193,19 @@ impl App {
                             .bg(self.palette.panel)
                             .fg(self.palette.foreground),
                     ),
-                row,
+                area,
+            );
+        } else {
+            let line = chrome::help_bar(
+                &self.current().help(),
+                chrome::accent(self.palette.dark),
+                self.palette.muted,
+            );
+            frame.render_widget(
+                Paragraph::new(line).style(Style::default().bg(self.palette.panel)),
+                area,
             );
         }
-        if let Some(dialog) = &self.dialog {
-            let palette = self.palette.clone();
-            let buffer = frame.buffer_mut();
-            dialog.render(area, buffer, &palette);
-        }
-    }
-
-    /// Draw the one-row breadcrumb header shown above sub-screens.
-    fn render_header(&self, frame: &mut Frame, area: Rect) {
-        let line = Line::from(vec![
-            Span::styled(" termux-settings", Style::default().fg(self.palette.muted)),
-            Span::styled(" › ", Style::default().fg(self.palette.muted)),
-            Span::styled(
-                self.current().title(),
-                Style::default()
-                    .fg(self.palette.primary)
-                    .add_modifier(Modifier::BOLD),
-            ),
-        ]);
-        frame.render_widget(
-            Paragraph::new(line).style(Style::default().bg(self.palette.panel)),
-            area,
-        );
     }
 
     /// Advance time-driven state: expire a stale status message.

@@ -51,7 +51,7 @@ pub fn gradient_title(text: &str, dark: bool) -> Vec<Span<'static>> {
 }
 
 /// Render a help-bar line: accent key hints + muted descriptions, ` · `-joined.
-pub fn help_bar(pairs: &[(&str, &str)], accent: Color, muted: Color) -> Line<'static> {
+pub fn help_bar(pairs: &[(&'static str, &'static str)], accent: Color, muted: Color) -> Line<'static> {
     let mut spans = Vec::new();
     for (index, (key, desc)) in pairs.iter().enumerate() {
         if index > 0 {

@@ -150,6 +150,20 @@ impl FontsTab {
         ScreenAction::None
     }
 
+    /// The key bindings the help bar shows for this screen.
+    pub fn help(&self) -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("↑/↓", "move"),
+            ("p", "preview"),
+            ("Enter", "apply"),
+            ("s", "slot"),
+            ("i", "import"),
+            ("d", "download"),
+            ("/", "filter"),
+            ("Esc", "back"),
+        ]
+    }
+
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         frame.render_widget(
             Block::default().style(
@@ -165,7 +179,6 @@ impl FontsTab {
                 Constraint::Length(3),
                 Constraint::Length(2),
                 Constraint::Min(5),
-                Constraint::Length(1),
             ])
             .split(area);
         // preview area
@@ -214,13 +227,5 @@ impl FontsTab {
                     .add_modifier(Modifier::BOLD),
             );
         frame.render_stateful_widget(list, layout[2], &mut self.state);
-        // hints
-        frame.render_widget(
-            Paragraph::new(
-                "[s]lot [p/Space]review [Enter]apply [Esc]restore [i]mport [d]ownload [/]filter",
-            )
-            .style(Style::default().fg(palette.muted)),
-            layout[3],
-        );
     }
 }

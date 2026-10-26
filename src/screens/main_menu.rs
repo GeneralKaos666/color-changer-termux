@@ -96,6 +96,16 @@ impl MainMenu {
         ScreenAction::None
     }
 
+    /// The key bindings the help bar shows for this screen.
+    pub fn help(&self) -> Vec<(&'static str, &'static str)> {
+        vec![
+            ("↑/↓", "move"),
+            ("Enter", "open"),
+            ("Esc", "quit"),
+            ("Ctrl+C", "quit"),
+        ]
+    }
+
     /// Draw the banner, status line and menu box.
     pub fn render(&mut self, frame: &mut Frame, area: Rect, palette: &Palette) {
         frame.render_widget(
@@ -128,11 +138,6 @@ impl MainMenu {
                 ),
             ])
             .alignment(Alignment::Center),
-        );
-        header.push(
-            Line::from("↑↓ move · Enter open · Esc quit · Ctrl+C quit")
-                .style(Style::default().fg(palette.muted))
-                .alignment(Alignment::Center),
         );
 
         let header_height = (header.len() as u16).min(area.height.saturating_sub(MENU_HEIGHT));
