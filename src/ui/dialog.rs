@@ -3,10 +3,11 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::buffer::Buffer;
 use ratatui::layout::{Alignment, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Paragraph, Widget, Wrap};
 
+use crate::chrome;
 use crate::theme::Palette;
 use crate::ui::input::Field;
 
@@ -136,8 +137,9 @@ impl Dialog {
         };
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
-            .title(self.title())
-            .border_style(Style::default().fg(palette.primary))
+            .title(format!(" {}", self.title()))
+            .title_alignment(Alignment::Left)
+            .border_style(Style::default().fg(chrome::accent(palette.dark)))
             .style(Style::default().bg(palette.panel).fg(palette.foreground));
         let inner = block.inner(rect);
         block.render(rect, buf);
@@ -241,8 +243,8 @@ impl Dialog {
             }
             let style = if focus == Some(index) {
                 Style::default()
-                    .bg(palette.primary)
-                    .fg(palette.background)
+                    .bg(chrome::accent(palette.dark))
+                    .fg(Color::White)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().bg(palette.boost).fg(palette.foreground)
