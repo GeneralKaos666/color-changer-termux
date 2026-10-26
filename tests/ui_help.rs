@@ -30,3 +30,15 @@ fn menu_still_renders_at_the_minimum_size() {
     let rendered = render_text(&mut app, 40, 10);
     assert!(rendered.contains("termux-settings"));
 }
+
+#[test]
+fn breadcrumb_uses_ascii_separator_in_ascii_mode() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = App::new(Paths::new(dir.path()));
+    support::open_picker(&mut app);
+    termux_settings::ui::ascii::set_ascii(true);
+    let rendered = render_text(&mut app, 80, 20);
+    assert!(!rendered.contains('›'));
+    assert!(rendered.contains('>'));
+    termux_settings::ui::ascii::set_ascii(false);
+}

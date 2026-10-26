@@ -36,6 +36,11 @@ pub fn filter() -> &'static str {
     if is_ascii() { "? " } else { "⌕ " }
 }
 
+/// The breadcrumb separator (`›` / `>`).
+pub fn breadcrumb() -> &'static str {
+    if is_ascii() { ">" } else { "›" }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -50,6 +55,7 @@ mod tests {
         assert_eq!(dot(), "●");
         assert_eq!(ellipsis(), "…");
         assert_eq!(filter(), "⌕ ");
+        assert_eq!(breadcrumb(), "›");
         set_ascii(true);
         assert_eq!(marker(), "> ");
         assert_eq!(rule_char(), '-');
@@ -57,6 +63,7 @@ mod tests {
         assert_eq!(dot(), "*");
         assert_eq!(ellipsis(), "...");
         assert_eq!(filter(), "? ");
+        assert_eq!(breadcrumb(), ">");
         set_ascii(false);
     }
 }

@@ -16,6 +16,7 @@ use crate::paths::Paths;
 use crate::screens::{Screen, ScreenAction, ScreenKind};
 use crate::theme::Palette;
 use crate::ui::dialog::{Dialog, DialogResult};
+use crate::ui::glyphs;
 
 /// Smallest terminal width the screens are drawn at.
 pub const MIN_WIDTH: u16 = 40;
@@ -167,7 +168,10 @@ impl App {
     fn render_header(&self, frame: &mut Frame, area: Rect) {
         let mut spans = chrome::gradient_title("termux-settings", self.palette.dark);
         if self.screens.len() > 1 {
-            spans.push(Span::styled(" › ", Style::default().fg(self.palette.muted)));
+            spans.push(Span::styled(
+                format!(" {} ", glyphs::breadcrumb()),
+                Style::default().fg(self.palette.muted),
+            ));
             spans.push(Span::styled(
                 self.current().title(),
                 Style::default()
