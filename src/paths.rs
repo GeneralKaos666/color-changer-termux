@@ -1,6 +1,8 @@
 use std::env;
 use std::path::{Path, PathBuf};
 
+use crate::model::font_slot::FontSlot;
+
 /// Filesystem locations used by the application.
 ///
 /// Every path funnels through [`Paths::root`] so that tests and the
@@ -75,22 +77,7 @@ impl Paths {
         self.root.join("backups")
     }
 
-    pub fn font_slot_path(&self, slot: &str) -> crate::error::Result<PathBuf> {
-        let name = match slot {
-            "regular" => "font.ttf",
-            "bold" => "font-bold.ttf",
-            "italic" => "font-italic.ttf",
-            "bold-italic" => "font-bold-italic.ttf",
-            _ => {
-                return Err(crate::error::Error::Invalid(format!(
-                    "unknown font slot: {slot:?}"
-                )));
-            }
-        };
-        Ok(self.root.join(name))
-    }
-
-    pub fn slot_names() -> Vec<&'static str> {
-        vec!["regular", "bold", "italic", "bold-italic"]
+    pub fn font_slot_path(&self, slot: FontSlot) -> PathBuf {
+        self.root.join(slot.file_name())
     }
 }

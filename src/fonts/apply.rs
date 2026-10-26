@@ -6,6 +6,7 @@ use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::fonts::validate;
+use crate::model::font_slot::FontSlot;
 use crate::paths::Paths;
 
 #[derive(Clone, Debug)]
@@ -29,13 +30,12 @@ static mut LAST_RELOAD_OK: Option<bool> = None;
 
 fn snapshot_originals(paths: &Paths) -> HashMap<String, Option<Vec<u8>>> {
     let mut originals = HashMap::new();
-    for slot in Paths::slot_names() {
-        if let Ok(p) = paths.font_slot_path(slot) {
-            match fs::read(&p) {
-                Ok(data) => originals.insert(slot.to_string(), Some(data)),
-                Err(_) => originals.insert(slot.to_string(), None),
-            };
-        }
+    for slot in FontSlot::ALL {
+        let p = paths.font_slot_path(slot);
+        match fs::read(&p) {
+            Ok(data) => originals.insert(slot.as_str().to_string(), Some(data)),
+            Err(_) => originals.insert(slot.as_str().to_string(), None),
+        };
     }
     originals
 }
@@ -146,17 +146,17 @@ fn copy_preserving_mode(src: &Path, dst: &Path) -> io::Result<()> {
     Ok(())
 }
 
-fn checked_target(paths: &Paths, src: &Path, slot: &str) -> crate::error::Result<PathBuf> {
+fn checked_target(paths: &Paths, src: &Path, slot: FontSlot) -> crate::error::Result<PathBuf> {
     let (ok, reason) = validate::is_valid_font(src);
     if !ok {
         return Err(crate::error::Error::Invalid(format!(
             "invalid font: {reason}"
         )));
     }
-    paths.font_slot_path(slot)
+    Ok(paths.font_slot_path(slot))
 }
 
-pub fn install_font(paths: &Paths, src: &Path, slot: &str) -> crate::error::Result<PathBuf> {
+pub fn install_font(paths: &Paths, src: &Path, slot: FontSlot) -> crate::error::Result<PathBuf> {
     let target = checked_target(paths, src, slot)?;
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent)?;
@@ -170,7 +170,7 @@ pub fn install_font(paths: &Paths, src: &Path, slot: &str) -> crate::error::Resu
 pub fn preview_font(
     paths: &Paths,
     src: &Path,
-    slot: &str,
+    slot: FontSlot,
     st: &mut SessionState,
 ) -> crate::error::Result<PathBuf> {
     let target = checked_target(paths, src, slot)?;
@@ -178,12 +178,12 @@ pub fn preview_font(
         fs::create_dir_all(parent)?;
     }
     let _ = ensure_backup_once(paths, &target)?;
-    st.backed_up.insert(slot.to_string(), true);
+    st.backed_up.insert(slot.as_str().to_string(), true);
     copy_preserving_mode(src, &target)?;
     st.dirty = true;
     st.preview = Some(PreviewRef {
         src: src.to_path_buf(),
-        slot: slot.to_string(),
+        slot: slot.as_str().to_string(),
     });
     reload_settings();
     Ok(target)
@@ -195,7 +195,7 @@ pub fn commit_preview(st: &mut SessionState) -> Option<PathBuf> {
     }
     let slot = st.preview.as_ref()?.slot.clone();
     let paths = crate::paths::Paths::from_env();
-    let target = paths.font_slot_path(&slot).ok()?;
+    let target = paths.font_slot_path(FontSlot::try_from(slot.as_str()).ok()?);
     st.dirty = false;
     st.preview = None;
     Some(target)
@@ -213,25 +213,24 @@ pub fn restore_original(paths: &Paths, st: &mut SessionState) -> io::Result<bool
         s
     };
     for slot in slots {
-        if !Paths::slot_names().contains(&slot.as_str()) {
+        let Ok(slot) = FontSlot::try_from(slot.as_str()) else {
             continue;
-        }
-        if let Ok(target) = paths.font_slot_path(&slot) {
-            if let Some(original) = st.originals.get(&slot) {
-                match original {
-                    None => {
-                        let _ = fs::remove_file(&target);
+        };
+        let target = paths.font_slot_path(slot);
+        if let Some(original) = st.originals.get(slot.as_str()) {
+            match original {
+                None => {
+                    let _ = fs::remove_file(&target);
+                }
+                Some(data) => {
+                    if let Some(parent) = target.parent() {
+                        fs::create_dir_all(parent)?;
                     }
-                    Some(data) => {
-                        if let Some(parent) = target.parent() {
-                            fs::create_dir_all(parent)?;
-                        }
-                        fs::write(&target, data)?;
-                    }
+                    fs::write(&target, data)?;
                 }
             }
-            st.backed_up.remove(&slot);
         }
+        st.backed_up.remove(slot.as_str());
     }
     st.dirty = false;
     st.preview = None;

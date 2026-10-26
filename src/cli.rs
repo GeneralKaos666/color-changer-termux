@@ -2,21 +2,20 @@
 
 use std::env;
 
+use crate::model::font_slot::FontSlot;
+
 #[derive(Debug, Default)]
 pub struct Args {
     pub list_fonts: bool,
     pub apply_font: Option<String>,
-    pub slot: String,
+    pub slot: Option<FontSlot>,
     pub version: bool,
     pub ascii: bool,
 }
 
 impl Args {
     pub fn parse() -> Self {
-        let mut args = Args {
-            slot: "regular".to_string(),
-            ..Default::default()
-        };
+        let mut args = Args::default();
         let mut argv = env::args().skip(1);
         while let Some(arg) = argv.next() {
             match arg.as_str() {
@@ -28,7 +27,7 @@ impl Args {
                 }
                 "--slot" => {
                     if let Some(s) = argv.next() {
-                        args.slot = s;
+                        args.slot = FontSlot::try_from(s.as_str()).ok();
                     }
                 }
                 "--version" => args.version = true,

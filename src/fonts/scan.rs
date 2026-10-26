@@ -2,6 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
+use crate::model::font_slot::FontSlot;
 use crate::paths::Paths;
 
 #[derive(Debug, Clone)]
@@ -70,8 +71,10 @@ fn is_font_file(name: &str) -> bool {
 
 pub fn list_library(paths: &Paths) -> std::io::Result<Vec<FontEntry>> {
     let dir = paths.fonts_dir();
-    let Ok(read_dir) = fs::read_dir(&dir) else {
-        return Ok(Vec::new());
+    let read_dir = match fs::read_dir(&dir) {
+        Ok(read_dir) => read_dir,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(e),
     };
     let mut out = Vec::new();
     for entry in read_dir.flatten() {
@@ -111,14 +114,42 @@ pub fn list_library(paths: &Paths) -> std::io::Result<Vec<FontEntry>> {
 
 pub fn read_active(paths: &Paths) -> std::io::Result<std::collections::HashMap<String, PathBuf>> {
     let mut active = std::collections::HashMap::new();
-    for slot in Paths::slot_names() {
-        if let Ok(p) = paths.font_slot_path(slot) {
-            if let Ok(meta) = fs::metadata(&p) {
-                if meta.is_file() {
-                    active.insert(slot.to_string(), p);
-                }
+    for slot in FontSlot::ALL {
+        let p = paths.font_slot_path(slot);
+        if let Ok(meta) = fs::metadata(&p) {
+            if meta.is_file() {
+                active.insert(slot.as_str().to_string(), p);
             }
         }
     }
     Ok(active)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_library_is_empty_not_an_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let paths = Paths::new(dir.path());
+        assert!(list_library(&paths).unwrap().is_empty());
+    }
+
+    #[test]
+    fn unreadable_library_is_an_error() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let fonts = dir.path().join("fonts");
+        std::fs::create_dir_all(&fonts).unwrap();
+        std::fs::write(fonts.join("x.ttf"), b"x").unwrap();
+        std::fs::set_permissions(&fonts, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+        let paths = Paths::new(dir.path());
+        assert!(list_library(&paths).is_err());
+
+        // Restore so the tempdir can be cleaned up.
+        std::fs::set_permissions(&fonts, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
 }

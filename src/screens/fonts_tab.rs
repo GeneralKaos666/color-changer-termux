@@ -10,6 +10,7 @@ use ratatui::{
 use crate::app::Command;
 use crate::chrome;
 use crate::fonts::{apply, prompt, scan};
+use crate::model::font_slot::FontSlot;
 use crate::paths::Paths;
 use crate::screens::ScreenAction;
 use crate::theme::Palette;
@@ -32,13 +33,11 @@ impl FontsTab {
     pub fn new(paths: &Paths) -> Self {
         // ensure builtin seed
         if scan::list_library(paths).unwrap_or_default().is_empty() {
-            let slot_path = paths.font_slot_path("regular").ok();
-            if let Some(sp) = slot_path {
-                if sp.exists() {
-                    let _ = std::fs::create_dir_all(paths.fonts_dir());
-                    let dest = paths.fonts_dir().join("Current.ttf");
-                    let _ = std::fs::copy(&sp, &dest);
-                }
+            let slot_path = paths.font_slot_path(FontSlot::Regular);
+            if slot_path.exists() {
+                let _ = std::fs::create_dir_all(paths.fonts_dir());
+                let dest = paths.fonts_dir().join("Current.ttf");
+                let _ = std::fs::copy(&slot_path, &dest);
             }
         }
         let entries = scan::list_library(paths).unwrap_or_default();
@@ -79,8 +78,11 @@ impl FontsTab {
                 ScreenAction::None
             }
             KeyCode::Char('s') => {
-                self.slot = (self.slot + 1) % Paths::slot_names().len();
-                ScreenAction::Status(format!("Slot: {}", Paths::slot_names()[self.slot]))
+                self.slot = (self.slot + 1) % FontSlot::ALL.len();
+                ScreenAction::Status(format!(
+                    "Slot: {}",
+                    FontSlot::ALL[self.slot].as_str()
+                ))
             }
             KeyCode::Char('p') | KeyCode::Char(' ') => {
                 if let Some(i) = self.state.selected() {
@@ -88,7 +90,7 @@ impl FontsTab {
                         let _ = apply::preview_font(
                             paths,
                             &entry.path,
-                            Paths::slot_names()[self.slot],
+                            FontSlot::ALL[self.slot],
                             &mut self.session,
                         );
                         return ScreenAction::Status(format!("Previewing {}", entry.name));
@@ -203,7 +205,7 @@ impl FontsTab {
         );
         // slot info
         let (open, close) = glyphs::chip();
-        let slot = Paths::slot_names()[self.slot];
+        let slot = FontSlot::ALL[self.slot].as_str();
         frame.render_widget(
             Paragraph::new(Line::from(vec![
                 Span::styled("slot  ", Style::default().fg(palette.muted)),

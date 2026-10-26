@@ -10,6 +10,7 @@ use ratatui::backend::CrosstermBackend;
 use termux_settings::app::App;
 use termux_settings::cli::Args;
 use termux_settings::fonts;
+use termux_settings::model::font_slot::FontSlot;
 use termux_settings::paths::Paths;
 use termux_settings::terminal;
 
@@ -31,24 +32,22 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
     if let Some(ref name) = args.apply_font {
+        let slot = args.slot.unwrap_or(FontSlot::Regular);
         let entries = fonts::scan::list_library(&paths).unwrap_or_default();
         // find entry
         if let Some(entry) = entries
             .iter()
             .find(|e| e.name == *name || e.name.to_lowercase() == name.to_lowercase())
         {
-            if let Err(e) = fonts::apply::install_font(&paths, &entry.path, &args.slot) {
+            if let Err(e) = fonts::apply::install_font(&paths, &entry.path, slot) {
                 eprintln!("error: {e}");
                 std::process::exit(1);
             }
             println!(
                 "Applied {} to {} ({})",
                 entry.name,
-                args.slot,
-                paths
-                    .font_slot_path(&args.slot)
-                    .unwrap_or_default()
-                    .display()
+                slot,
+                paths.font_slot_path(slot).display()
             );
             return Ok(());
         } else {
