@@ -143,18 +143,18 @@ pub fn apply_theme(theme: &Path, colors_properties: &Path) -> Result<()> {
             theme.display()
         )));
     }
-    if let Ok(existing) = std::fs::canonicalize(colors_properties) {
-        if existing == resolved {
-            return Ok(());
-        }
+    if let Ok(existing) = std::fs::canonicalize(colors_properties)
+        && existing == resolved
+    {
+        return Ok(());
     }
-    if let Ok(meta) = std::fs::symlink_metadata(colors_properties) {
-        if meta.file_type().is_dir() {
-            return Err(Error::Invalid(format!(
-                "{} is a directory",
-                colors_properties.display()
-            )));
-        }
+    if let Ok(meta) = std::fs::symlink_metadata(colors_properties)
+        && meta.file_type().is_dir()
+    {
+        return Err(Error::Invalid(format!(
+            "{} is a directory",
+            colors_properties.display()
+        )));
     }
     let dir = colors_properties
         .parent()

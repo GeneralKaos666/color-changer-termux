@@ -185,15 +185,15 @@ pub fn validate_value(spec: &FieldSpec, value: &str) -> Result<String, String> {
 fn validate_int(spec: &FieldSpec, value: &str) -> Result<String, String> {
     let number =
         parse_decimal(value).ok_or_else(|| format!("{} must be a whole number", spec.label))?;
-    if let Some(min) = spec.min {
-        if number < i128::from(min) {
-            return Err(format!("{} must be >= {min}", spec.label));
-        }
+    if let Some(min) = spec.min
+        && number < i128::from(min)
+    {
+        return Err(format!("{} must be >= {min}", spec.label));
     }
-    if let Some(max) = spec.max {
-        if number > i128::from(max) {
-            return Err(format!("{} must be <= {max}", spec.label));
-        }
+    if let Some(max) = spec.max
+        && number > i128::from(max)
+    {
+        return Err(format!("{} must be <= {max}", spec.label));
     }
     Ok(number.to_string())
 }
