@@ -1,5 +1,11 @@
 # Hardening and Maintenance Implementation Plan
 
+> **Historical note:** this plan is kept as written. Its `1.85.0` MSRV figures
+> were corrected to `1.88.0` during execution — the source already used
+> let-chains, so `1.85.0` never actually built — and phase 2 later replaced
+> `ttf-parser` with `skrifa`. See `CHANGELOG.md` and
+> `docs/specs/2026-10-30-dependency-modernization-design.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close the four phase‑1 gaps from the audit: unbounded font downloads, a silently permissive CLI, CI/release blind spots, and missing repository documentation.
