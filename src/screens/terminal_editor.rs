@@ -319,7 +319,8 @@ impl TerminalEditor {
         colors: TerminalColors,
         paths: &Paths,
     ) -> ScreenAction {
-        if let Err(error) = make_backup(&paths.colors_properties(), &paths.backups(), "colors") {
+        if let Err(error) = make_backup(&paths.colors_properties(), &paths.backups_dir(), "colors")
+        {
             return ScreenAction::OpenDialog(Dialog::message(
                 &format!("Could not back up the current config: {error}"),
                 "Backup failed",

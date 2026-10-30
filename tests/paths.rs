@@ -14,7 +14,7 @@ fn accessors_join_under_root() {
         p.termux_properties(),
         PathBuf::from("/tmp/home/.termux/termux.properties")
     );
-    assert_eq!(p.backups(), PathBuf::from("/tmp/home/.termux/backups"));
+    assert_eq!(p.backups_dir(), PathBuf::from("/tmp/home/.termux/backups"));
 }
 
 #[test]
