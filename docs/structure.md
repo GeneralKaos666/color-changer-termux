@@ -19,17 +19,17 @@ logic of its own.
 ├── scripts/
 │   └── check-release-version.sh    fails a release tag that disagrees with Cargo.toml
 ├── src/
-│   ├── app.rs                  top-level app state and message loop
+│   ├── app.rs                  app state, rendering and the message handler
 │   ├── chrome.rs               title, borders, footer help bar
-│   ├── cli.rs                  argument parsing, `--help`, non-TUI commands
+│   ├── cli.rs                  argument parsing, `--help`, non-TUI commands, the TUI loop
 │   ├── error.rs                the crate error type and its `Result` alias
 │   ├── lib.rs                  module wiring and the public surface
 │   ├── library.rs              reads `~/.termux/colors/` theme files
 │   ├── main.rs                 binary entry point; delegates to `cli::run`
 │   ├── paths.rs                every on-disk location, rooted at `TERMUX_HOME`
 │   ├── presets.rs              built-in colour presets
-│   ├── runtime.rs              terminal setup, teardown and the event loop
-│   ├── terminal.rs             terminal capability and size checks
+│   ├── runtime.rs              the `Msg` channel and the worker spawners
+│   ├── terminal.rs             raw mode, the alternate screen and restoration
 │   ├── theme.rs                the TUI's own palette, derived from the active theme
 │   ├── fonts/
 │   │   ├── apply.rs            per-slot font installation and backups
