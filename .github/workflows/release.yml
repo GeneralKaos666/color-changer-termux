@@ -12,7 +12,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # A tag that does not match Cargo.toml would publish binaries reporting
@@ -29,7 +29,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi
@@ -53,13 +53,13 @@ jobs:
           sha256sum termux-settings-armv7-linux-androideabi > termux-settings-armv7-linux-androideabi.sha256
       # Best effort: a missing attestation should not block a release that has
       # already validated and built cleanly.
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@v4
         continue-on-error: true
         with:
           subject-path: |
             termux-settings-aarch64-linux-android
             termux-settings-armv7-linux-androideabi
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             termux-settings-aarch64-linux-android
