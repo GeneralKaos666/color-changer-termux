@@ -6,16 +6,60 @@ use std::time::Duration;
 use crate::fonts::validate;
 use crate::paths::Paths;
 
-const NF_BASE: &str = "https://github.com/ryanoasis/nerd-fonts/raw/v3.2.1/patched-fonts";
+const NF_BASE: &str = "https://github.com/ryanoasis/nerd-fonts/raw/v3.5.1/patched-fonts";
 
 /// How long a download may take overall before it is aborted.
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(60);
+
+/// Largest font body the downloader will accept.
+///
+/// A patched Nerd Font TTF is usually a few megabytes; this ceiling stops a
+/// server that lies about (or omits) `Content-Length` from exhausting memory.
+const MAX_DOWNLOAD_BYTES: u64 = 20 * 1024 * 1024;
+
+/// Read at most [`MAX_DOWNLOAD_BYTES`] from `reader`, reporting progress.
+///
+/// A body of exactly the cap is accepted. When `announced_total` already
+/// exceeds the cap the body is not read at all; when the stream grows past the
+/// cap anyway, reading stops at the first chunk that crosses it.
+pub fn read_capped(
+    mut reader: impl Read,
+    announced_total: Option<u64>,
+    mut on_progress: impl FnMut(u64, Option<u64>),
+) -> Result<Vec<u8>, String> {
+    if announced_total.is_some_and(|total| total > MAX_DOWNLOAD_BYTES) {
+        return Err(too_large());
+    }
+
+    let mut bytes = Vec::new();
+    let mut received = 0u64;
+    let mut buf = [0u8; 8192];
+    loop {
+        let n = reader
+            .read(&mut buf)
+            .map_err(|error| format!("download failed: {error}"))?;
+        if n == 0 {
+            break;
+        }
+        received += n as u64;
+        if received > MAX_DOWNLOAD_BYTES {
+            return Err(too_large());
+        }
+        bytes.extend_from_slice(&buf[..n]);
+        on_progress(received, announced_total);
+    }
+    Ok(bytes)
+}
+
+fn too_large() -> String {
+    "download failed: file is larger than 20 MB".to_owned()
+}
 
 pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     let mut m = HashMap::new();
     m.insert(
         "3270-Regular".to_string(),
-        format!("{NF_BASE}/3270/Regular/3270NerdFont-Regular.ttf"),
+        format!("{NF_BASE}/3270/3270NerdFont-Regular.ttf"),
     );
     m.insert(
         "Agave-Regular".to_string(),
@@ -23,11 +67,11 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "AnonymousPro-Regular".to_string(),
-        format!("{NF_BASE}/AnonymousPro/Regular/AnonymiceProNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/AnonymousPro/AnonymiceProNerdFont-Regular.ttf"),
     );
     m.insert(
         "Arimo-Regular".to_string(),
-        format!("{NF_BASE}/Arimo/Regular/ArimoNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Arimo/ArimoNerdFont-Regular.ttf"),
     );
     m.insert(
         "BigBlueTerminal-Regular".to_string(),
@@ -35,15 +79,15 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "BitstreamVeraSansMono-Regular".to_string(),
-        format!("{NF_BASE}/BitstreamVeraSansMono/Regular/BitstromWeraNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/BitstreamVeraSansMono/BitstromWeraNerdFont-Regular.ttf"),
     );
     m.insert(
         "CascadiaCode-Regular".to_string(),
-        format!("{NF_BASE}/CascadiaCode/Regular/CaskaydiaCoveNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/CascadiaCode/CaskaydiaCoveNerdFont-Regular.ttf"),
     );
     m.insert(
         "Cousine-Regular".to_string(),
-        format!("{NF_BASE}/Cousine/Regular/CousineNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Cousine/CousineNerdFont-Regular.ttf"),
     );
     m.insert(
         "DaddyTimeMono-Regular".to_string(),
@@ -51,7 +95,7 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "DejaVuSansMono-Regular".to_string(),
-        format!("{NF_BASE}/DejaVuSansMono/Regular/DejaVuSansMNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/DejaVuSansMono/DejaVuSansMNerdFont-Regular.ttf"),
     );
     m.insert(
         "EnvyCodeR-Regular".to_string(),
@@ -59,15 +103,15 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "FantasqueSansMono-Regular".to_string(),
-        format!("{NF_BASE}/FantasqueSansMono/Regular/FantasqueSansMNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/FantasqueSansMono/FantasqueSansMNerdFont-Regular.ttf"),
     );
     m.insert(
         "FiraCode-Regular".to_string(),
-        format!("{NF_BASE}/FiraCode/Regular/FiraCodeNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/FiraCode/FiraCodeNerdFont-Regular.ttf"),
     );
     m.insert(
         "GoMono-Regular".to_string(),
-        format!("{NF_BASE}/Go-Mono/Regular/GoMonoNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Go-Mono/GoMonoNerdFont-Regular.ttf"),
     );
     m.insert(
         "Gohu-Regular".to_string(),
@@ -75,7 +119,7 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "Hack-Regular".to_string(),
-        format!("{NF_BASE}/Hack/Regular/HackNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Hack/HackNerdFont-Regular.ttf"),
     );
     m.insert(
         "HeavyData-Regular".to_string(),
@@ -83,7 +127,7 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "IBMPlexMono-Regular".to_string(),
-        format!("{NF_BASE}/IBMPlexMono/Mono/BlexMonoNerdFontMono-Regular.ttf"),
+        format!("{NF_BASE}/IBMPlexMono/BlexMonoNerdFontMono-Regular.ttf"),
     );
     m.insert(
         "Inconsolata-Regular".to_string(),
@@ -91,7 +135,7 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "InconsolataGo-Regular".to_string(),
-        format!("{NF_BASE}/InconsolataGo/Regular/InconsolataGoNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/InconsolataGo/InconsolataGoNerdFont-Regular.ttf"),
     );
     m.insert(
         "InconsolataLGC-Regular".to_string(),
@@ -107,15 +151,15 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "JetBrainsMono-Light".to_string(),
-        format!("{NF_BASE}/JetBrainsMono/Ligatures/Light/JetBrainsMonoNerdFont-Light.ttf"),
+        format!("{NF_BASE}/JetBrainsMono/Ligatures/JetBrainsMonoNerdFont-Light.ttf"),
     );
     m.insert(
         "JetBrainsMono-Regular".to_string(),
-        format!("{NF_BASE}/JetBrainsMono/Ligatures/Regular/JetBrainsMonoNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/JetBrainsMono/Ligatures/JetBrainsMonoNerdFont-Regular.ttf"),
     );
     m.insert(
         "Lekton-Regular".to_string(),
-        format!("{NF_BASE}/Lekton/Regular/LektonNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Lekton/LektonNerdFont-Regular.ttf"),
     );
     m.insert(
         "LiberationMono-Regular".to_string(),
@@ -131,19 +175,19 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "MesloLG-Regular".to_string(),
-        format!("{NF_BASE}/Meslo/L/Regular/MesloLGLNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Meslo/L/MesloLGLNerdFont-Regular.ttf"),
     );
     m.insert(
         "Monofur-Regular".to_string(),
-        format!("{NF_BASE}/Monofur/Regular/MonofurNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Monofur/MonofurNerdFont-Regular.ttf"),
     );
     m.insert(
         "Monoid-Regular".to_string(),
-        format!("{NF_BASE}/Monoid/Regular/MonoidNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Monoid/MonoidNerdFont-Regular.ttf"),
     );
     m.insert(
         "Mononoki-Regular".to_string(),
-        format!("{NF_BASE}/Mononoki/Regular/MononokiNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Mononoki/MononokiNerdFont-Regular.ttf"),
     );
     m.insert(
         "NotoSansMono-Regular".to_string(),
@@ -159,7 +203,7 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "RobotoMono-Regular".to_string(),
-        format!("{NF_BASE}/RobotoMono/Regular/RobotoMonoNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/RobotoMono/RobotoMonoNerdFont-Regular.ttf"),
     );
     m.insert(
         "ShareTechMono-Regular".to_string(),
@@ -171,7 +215,7 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "SpaceMono-Regular".to_string(),
-        format!("{NF_BASE}/SpaceMono/Regular/SpaceMonoNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/SpaceMono/SpaceMonoNerdFont-Regular.ttf"),
     );
     m.insert(
         "Terminus-Regular".to_string(),
@@ -179,23 +223,23 @@ pub fn nerd_fonts_catalog() -> HashMap<String, String> {
     );
     m.insert(
         "Tinos-Regular".to_string(),
-        format!("{NF_BASE}/Tinos/Regular/TinosNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Tinos/TinosNerdFont-Regular.ttf"),
     );
     m.insert(
         "Ubuntu-Regular".to_string(),
-        format!("{NF_BASE}/Ubuntu/Regular/UbuntuNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/Ubuntu/UbuntuNerdFont-Regular.ttf"),
     );
     m.insert(
         "UbuntuMono-Regular".to_string(),
-        format!("{NF_BASE}/UbuntuMono/Regular/UbuntuMonoNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/UbuntuMono/UbuntuMonoNerdFont-Regular.ttf"),
     );
     m.insert(
         "VictorMono-Regular".to_string(),
-        format!("{NF_BASE}/VictorMono/Regular/VictorMonoNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/VictorMono/VictorMonoNerdFont-Regular.ttf"),
     );
     m.insert(
         "iAWriterMono-Regular".to_string(),
-        format!("{NF_BASE}/iA-Writer/Mono/Regular/iMWritingMonoNerdFont-Regular.ttf"),
+        format!("{NF_BASE}/iA-Writer/Mono/iMWritingMonoNerdFont-Regular.ttf"),
     );
     m
 }
@@ -209,10 +253,7 @@ pub fn sorted_catalog() -> Vec<(String, String)> {
 
 /// Download `url`, streaming to memory and reporting progress as
 /// `(received, total)` with `total` from `Content-Length` when present.
-pub fn download(
-    url: &str,
-    mut on_progress: impl FnMut(u64, Option<u64>),
-) -> Result<Vec<u8>, String> {
+pub fn download(url: &str, on_progress: impl FnMut(u64, Option<u64>)) -> Result<Vec<u8>, String> {
     let agent = ureq::AgentBuilder::new().timeout(DOWNLOAD_TIMEOUT).build();
     let response = agent
         .get(url)
@@ -221,22 +262,7 @@ pub fn download(
     let total = response
         .header("Content-Length")
         .and_then(|value| value.parse::<u64>().ok());
-    let mut reader = response.into_reader();
-    let mut bytes = Vec::new();
-    let mut received = 0u64;
-    let mut buf = [0u8; 8192];
-    loop {
-        let n = reader
-            .read(&mut buf)
-            .map_err(|e| format!("download failed: {e}"))?;
-        if n == 0 {
-            break;
-        }
-        bytes.extend_from_slice(&buf[..n]);
-        received += n as u64;
-        on_progress(received, total);
-    }
-    Ok(bytes)
+    read_capped(response.into_reader(), total, on_progress)
 }
 
 /// Validate `bytes` as a font and write them atomically into the library as
@@ -257,6 +283,7 @@ pub fn install_bytes(paths: &Paths, name: &str, bytes: &[u8]) -> crate::error::R
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Cursor;
 
     fn u32(v: u32) -> [u8; 4] {
         v.to_be_bytes()
@@ -355,5 +382,60 @@ mod tests {
         sorted.sort();
         assert_eq!(names, sorted);
         assert!(!catalog.is_empty());
+    }
+
+    #[test]
+    fn read_capped_accepts_a_body_under_the_cap() {
+        let mut progress = Vec::new();
+        let bytes = read_capped(Cursor::new(b"font".to_vec()), Some(4), |received, total| {
+            progress.push((received, total));
+        })
+        .unwrap();
+        assert_eq!(bytes, b"font");
+        assert_eq!(progress, vec![(4, Some(4))]);
+    }
+
+    #[test]
+    fn read_capped_rejects_an_announced_size_over_the_cap() {
+        let mut called = false;
+        let result = read_capped(std::io::empty(), Some(MAX_DOWNLOAD_BYTES + 1), |_, _| {
+            called = true
+        });
+        let message = result.unwrap_err();
+        assert!(message.contains("larger than 20 MB"), "{message}");
+        assert!(
+            !called,
+            "body must not be read when Content-Length is too large"
+        );
+    }
+
+    #[test]
+    fn read_capped_rejects_a_stream_that_exceeds_the_cap() {
+        let body = std::io::repeat(b'x').take(MAX_DOWNLOAD_BYTES + 1);
+        assert!(read_capped(body, None, |_, _| {}).is_err());
+    }
+
+    #[test]
+    fn read_capped_accepts_a_body_exactly_at_the_cap() {
+        let body = std::io::repeat(b'x').take(MAX_DOWNLOAD_BYTES);
+        assert_eq!(
+            read_capped(body, None, |_, _| {}).unwrap().len() as u64,
+            MAX_DOWNLOAD_BYTES
+        );
+    }
+
+    #[test]
+    fn catalog_is_pinned_to_v3_5_1_and_well_formed() {
+        assert_eq!(
+            NF_BASE,
+            "https://github.com/ryanoasis/nerd-fonts/raw/v3.5.1/patched-fonts"
+        );
+        let catalog = nerd_fonts_catalog();
+        assert!(!catalog.is_empty());
+        for (name, url) in &catalog {
+            assert!(!name.is_empty());
+            assert!(url.starts_with(NF_BASE), "{name}: {url}");
+            assert!(url.ends_with(".ttf"), "{name}: {url}");
+        }
     }
 }
