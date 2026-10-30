@@ -52,6 +52,12 @@ jobs:
 
   audit:
     runs-on: ubuntu-latest
+    # The scheduled run files an issue per new advisory, and every run posts a
+    # check; without these scopes the token is read-only and both fail.
+    permissions:
+      contents: read
+      issues: write
+      checks: write
     steps:
       - uses: actions/checkout@v4
       - uses: rustsec/audit-check@v2
