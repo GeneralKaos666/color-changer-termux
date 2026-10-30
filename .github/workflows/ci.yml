@@ -3,19 +3,57 @@ name: CI
 on:
   push:
   pull_request:
+  schedule:
+    # Weekly advisory scan, so a fresh RustSec advisory is reported even when
+    # nobody has pushed for a while.
+    - cron: "0 6 * * 1"
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   test:
+    if: github.event_name != 'schedule'
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: ["1.85.0", stable]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked
+      # Lints only need to run once; the older toolchain is the compatibility
+      # gate, not a second opinion on style.
+      - if: matrix.rust == 'stable'
+        run: cargo fmt --check
+      - if: matrix.rust == 'stable'
+        run: cargo clippy --all-targets -- -D warnings
+
+  android:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          targets: aarch64-linux-android,armv7-linux-androideabi
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26d
+          link-to-system-path: true
       - uses: Swatinem/rust-cache@v2
-      - run: cargo fmt --check
-      - run: cargo clippy --all-targets -- -D warnings
-      - run: cargo test
+      - run: cargo install cargo-ndk --version 4.1.2 --locked
+      - run: cargo ndk -t arm64-v8a -t armeabi-v7a --platform 24 build --locked
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
