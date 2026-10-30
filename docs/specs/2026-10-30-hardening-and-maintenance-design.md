@@ -215,6 +215,29 @@ Dependabot: weekly `cargo` and `github-actions` updates, grouped by ecosystem.
 
 ## Phase 2 (separate spec and plan)
 
-`ratatui 0.29 → 0.30`, `crossterm 0.28 → 0.29`, `tui-input 0.11 → 0.15`,
-`ureq 2.12 → 3.5`, `ttf-parser 0.25 → 0.25.1`, on its own branch, verified by
-the full suite plus a manual TUI run.
+Two workstreams on their own branch, each with its own spec and plan.
+
+**Dependency modernization:** `ratatui 0.29 → 0.30`, `crossterm 0.28 → 0.29`,
+`tui-input 0.11 → 0.15`, `ureq 2.12 → 3.5`, `ttf-parser 0.25 → 0.25.1`, verified
+by the full suite plus a manual TUI run.
+
+**Review follow-ups deferred from phase 1** (found in the phase‑1 whole-branch
+review, graded Minor, none blocking):
+
+- An automated regression test for `scripts/check-release-version.sh` covering
+  exact match, a string prefix (`v1.1.1` vs `v1.1.10`), a mismatch, and a
+  `Cargo.toml` whose only other `version` key belongs to a dependency.
+- Derive the "20 MB" in `read_capped`'s error message from
+  `MAX_DOWNLOAD_BYTES` so the two cannot drift apart.
+- Pass `--locked` to the clippy step in CI so linting covers the same
+  dependency graph the release builds.
+- Split `permissions` in `release.yml`: `contents: read` on `verify`, with the
+  write scopes scoped to the `android` job that needs them.
+- Fix the catalog-verification snippet in the phase‑1 plan (its `sed` keeps a
+  trailing quote, so every URL reports `404`).
+- Record the removal of the public `Paths::backups()` accessor in
+  `CHANGELOG.md`.
+- Pre-size the download buffer with
+  `Vec::with_capacity(min(announced_total, MAX_DOWNLOAD_BYTES))` to avoid
+  reallocations on a large body.
+
