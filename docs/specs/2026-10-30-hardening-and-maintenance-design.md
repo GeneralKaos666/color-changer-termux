@@ -245,3 +245,8 @@ review, graded Minor, none blocking):
   `Vec::with_capacity(min(announced_total, MAX_DOWNLOAD_BYTES))` to avoid
   reallocations on a large body.
 
+**Superseded in part:** phase 2 is specified in
+`docs/specs/2026-10-30-dependency-modernization-design.md`. That spec replaces
+`ttf-parser 0.25.1` with `skrifa 0.49` (upstream is unmaintained) and keeps the
+MSRV at `1.88`; every other item above is carried forward unchanged.
+
