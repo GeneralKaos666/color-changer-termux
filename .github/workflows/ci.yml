@@ -32,7 +32,7 @@ jobs:
       - if: matrix.rust == 'stable'
         run: cargo fmt --check
       - if: matrix.rust == 'stable'
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
 
   android:
     if: github.event_name != 'schedule'
