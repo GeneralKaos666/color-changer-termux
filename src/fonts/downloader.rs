@@ -282,81 +282,84 @@ pub fn install_bytes(paths: &Paths, name: &str, bytes: &[u8]) -> crate::error::R
 }
 
 #[cfg(test)]
+fn u32(v: u32) -> [u8; 4] {
+    v.to_be_bytes()
+}
+#[cfg(test)]
+fn u16(v: u16) -> [u8; 2] {
+    v.to_be_bytes()
+}
+#[cfg(test)]
+fn i16(v: i16) -> [u8; 2] {
+    v.to_be_bytes()
+}
+
+#[cfg(test)]
+pub(crate) fn minimal_ttf() -> Vec<u8> {
+    let mut head = Vec::new();
+    head.extend(u32(0x00010000));
+    head.extend(u32(0x00010000));
+    head.extend(u32(0));
+    head.extend(u32(0x5F0F3CF5));
+    head.extend(u16(0));
+    head.extend(u16(1000));
+    head.extend(u64::to_be_bytes(0));
+    head.extend(u64::to_be_bytes(0));
+    head.extend(i16(0));
+    head.extend(i16(0));
+    head.extend(i16(1000));
+    head.extend(i16(1000));
+    head.extend(u16(0));
+    head.extend(u16(8));
+    head.extend(i16(2));
+    head.extend(i16(0));
+    head.extend(i16(0));
+    let mut hhea = Vec::new();
+    hhea.extend(u32(0x00010000));
+    hhea.extend(i16(800));
+    hhea.extend(i16(-200));
+    hhea.extend(i16(0));
+    hhea.extend(u16(1000));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(1000));
+    hhea.extend(i16(1));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(i16(0));
+    hhea.extend(u16(1));
+    let mut maxp = Vec::new();
+    maxp.extend(u32(0x00005000));
+    maxp.extend(u16(1));
+    let tables: Vec<(&[u8; 4], Vec<u8>)> = vec![(b"head", head), (b"hhea", hhea), (b"maxp", maxp)];
+    let mut d = Vec::new();
+    d.extend(u32(0x00010000));
+    d.extend(u16(3));
+    d.extend(u16(0));
+    d.extend(u16(0));
+    d.extend(u16(0));
+    let mut offset = 12 + 16 * 3;
+    for (tag, data) in &tables {
+        d.extend_from_slice(*tag);
+        d.extend(u32(0));
+        d.extend(u32(offset as u32));
+        d.extend(u32(data.len() as u32));
+        offset += data.len();
+    }
+    for (_, data) in &tables {
+        d.extend_from_slice(data);
+    }
+    d
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Cursor;
-
-    fn u32(v: u32) -> [u8; 4] {
-        v.to_be_bytes()
-    }
-    fn u16(v: u16) -> [u8; 2] {
-        v.to_be_bytes()
-    }
-    fn i16(v: i16) -> [u8; 2] {
-        v.to_be_bytes()
-    }
-
-    fn minimal_ttf() -> Vec<u8> {
-        let mut head = Vec::new();
-        head.extend(u32(0x00010000));
-        head.extend(u32(0x00010000));
-        head.extend(u32(0));
-        head.extend(u32(0x5F0F3CF5));
-        head.extend(u16(0));
-        head.extend(u16(1000));
-        head.extend(u64::to_be_bytes(0));
-        head.extend(u64::to_be_bytes(0));
-        head.extend(i16(0));
-        head.extend(i16(0));
-        head.extend(i16(1000));
-        head.extend(i16(1000));
-        head.extend(u16(0));
-        head.extend(u16(8));
-        head.extend(i16(2));
-        head.extend(i16(0));
-        head.extend(i16(0));
-        let mut hhea = Vec::new();
-        hhea.extend(u32(0x00010000));
-        hhea.extend(i16(800));
-        hhea.extend(i16(-200));
-        hhea.extend(i16(0));
-        hhea.extend(u16(1000));
-        hhea.extend(i16(0));
-        hhea.extend(i16(0));
-        hhea.extend(i16(1000));
-        hhea.extend(i16(1));
-        hhea.extend(i16(0));
-        hhea.extend(i16(0));
-        hhea.extend(i16(0));
-        hhea.extend(i16(0));
-        hhea.extend(i16(0));
-        hhea.extend(i16(0));
-        hhea.extend(i16(0));
-        hhea.extend(u16(1));
-        let mut maxp = Vec::new();
-        maxp.extend(u32(0x00005000));
-        maxp.extend(u16(1));
-        let tables: Vec<(&[u8; 4], Vec<u8>)> =
-            vec![(b"head", head), (b"hhea", hhea), (b"maxp", maxp)];
-        let mut d = Vec::new();
-        d.extend(u32(0x00010000));
-        d.extend(u16(3));
-        d.extend(u16(0));
-        d.extend(u16(0));
-        d.extend(u16(0));
-        let mut offset = 12 + 16 * 3;
-        for (tag, data) in &tables {
-            d.extend_from_slice(*tag);
-            d.extend(u32(0));
-            d.extend(u32(offset as u32));
-            d.extend(u32(data.len() as u32));
-            offset += data.len();
-        }
-        for (_, data) in &tables {
-            d.extend_from_slice(data);
-        }
-        d
-    }
 
     #[test]
     fn install_bytes_rejects_invalid_font() {

@@ -2,6 +2,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
+use skrifa::MetadataProvider;
+use skrifa::string::StringId;
+
 use crate::paths::Paths;
 
 #[derive(Debug, Clone)]
@@ -14,26 +17,33 @@ pub struct FontEntry {
     pub style: String,
 }
 
+/// The last string recorded for `id`, matching the previous parser's
+/// last-record-wins order.
+fn last_name(font: &skrifa::FontRef<'_>, id: StringId) -> Option<String> {
+    font.localized_strings(id)
+        .last()
+        .map(|string| string.to_string())
+}
+
+/// The first string recorded for `id`.
+fn first_name(font: &skrifa::FontRef<'_>, id: StringId) -> Option<String> {
+    font.localized_strings(id)
+        .next()
+        .map(|string| string.to_string())
+}
+
 fn family_style(path: &std::path::Path, stem: &str) -> (String, String) {
     let family = stem.to_string();
     let style = "Regular".to_string();
     if let Ok(data) = fs::read(path)
-        && let Ok(face) = ttf_parser::Face::parse(&data, 0)
+        && let Ok(font) = skrifa::FontRef::new(&data)
     {
-        let mut fam = family.clone();
-        let mut sty = style;
-        for name in face.names() {
-            if (name.name_id == 16 || (name.name_id == 1 && fam == stem))
-                && let Some(s) = name.to_string()
-            {
-                fam = s;
-            }
-            if (name.name_id == 17 || (name.name_id == 2 && sty == "Regular"))
-                && let Some(s) = name.to_string()
-            {
-                sty = s;
-            }
-        }
+        let fam = last_name(&font, StringId::TYPOGRAPHIC_FAMILY_NAME)
+            .or_else(|| first_name(&font, StringId::FAMILY_NAME))
+            .unwrap_or(family);
+        let sty = last_name(&font, StringId::TYPOGRAPHIC_SUBFAMILY_NAME)
+            .or_else(|| first_name(&font, StringId::SUBFAMILY_NAME))
+            .unwrap_or(style);
         return (fam, sty);
     }
     (family, style)
