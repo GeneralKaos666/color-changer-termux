@@ -17,19 +17,25 @@ pub struct FontEntry {
     pub style: String,
 }
 
-/// The last string recorded for `id`, matching the previous parser's
-/// last-record-wins order.
+/// The last readable string recorded for `id`, matching the previous
+/// parser's last-record-wins order.
+///
+/// A record whose storage cannot be decoded reads back as an empty string, so
+/// empty values are dropped here: the previous parser reported them as absent
+/// and `family_style` fell back to the file stem.
 fn last_name(font: &skrifa::FontRef<'_>, id: StringId) -> Option<String> {
     font.localized_strings(id)
         .last()
         .map(|string| string.to_string())
+        .filter(|value| !value.is_empty())
 }
 
-/// The first string recorded for `id`.
+/// The first readable string recorded for `id`.
 fn first_name(font: &skrifa::FontRef<'_>, id: StringId) -> Option<String> {
     font.localized_strings(id)
         .next()
         .map(|string| string.to_string())
+        .filter(|value| !value.is_empty())
 }
 
 fn family_style(path: &std::path::Path, stem: &str) -> (String, String) {
@@ -100,6 +106,52 @@ pub fn list_library(paths: &Paths) -> std::io::Result<Vec<FontEntry>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A font whose only table is a `name` whose typographic-family record
+    /// points past the end of the string storage, so the value cannot be read.
+    fn font_with_an_unreadable_name() -> Vec<u8> {
+        let mut name = Vec::new();
+        name.extend(0u16.to_be_bytes()); // format
+        name.extend(1u16.to_be_bytes()); // count
+        name.extend(18u16.to_be_bytes()); // stringOffset
+        name.extend(3u16.to_be_bytes()); // platformID
+        name.extend(1u16.to_be_bytes()); // encodingID
+        name.extend(0x409u16.to_be_bytes()); // languageID
+        name.extend(16u16.to_be_bytes()); // nameID
+        name.extend(8u16.to_be_bytes()); // length
+        name.extend(4u16.to_be_bytes()); // offset: past the storage
+        name.extend(b"abcd"); // storage, four bytes
+
+        let offset = 12 + 16;
+        let mut data = Vec::new();
+        data.extend(0x0001_0000u32.to_be_bytes());
+        data.extend(1u16.to_be_bytes());
+        data.extend(0u16.to_be_bytes());
+        data.extend(0u16.to_be_bytes());
+        data.extend(0u16.to_be_bytes());
+        data.extend(*b"name");
+        data.extend(0u32.to_be_bytes());
+        data.extend((offset as u32).to_be_bytes());
+        data.extend((name.len() as u32).to_be_bytes());
+        data.extend(name);
+        data
+    }
+
+    #[test]
+    fn an_unreadable_name_falls_back_to_the_stem() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Corrupt.ttf");
+        let data = font_with_an_unreadable_name();
+        std::fs::write(&path, &data).unwrap();
+        assert!(
+            skrifa::FontRef::new(&data).is_ok(),
+            "the fixture must parse"
+        );
+        assert_eq!(
+            family_style(&path, "Corrupt"),
+            ("Corrupt".to_string(), "Regular".to_string())
+        );
+    }
 
     #[test]
     fn missing_library_is_empty_not_an_error() {
