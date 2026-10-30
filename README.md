@@ -1,5 +1,9 @@
 # termux-settings
 
+[![CI](https://github.com/GeneralKaos666/termux-settings/actions/workflows/ci.yml/badge.svg)](https://github.com/GeneralKaos666/termux-settings/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/GeneralKaos666/termux-settings)](https://github.com/GeneralKaos666/termux-settings/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A keyboard-driven TUI for [Termux](https://termux.dev) that changes your
 terminal colours, your Termux app theme, and your fonts.
 
@@ -87,6 +91,8 @@ sha256sum -c termux-settings-aarch64-linux-android.sha256
 ```
 
 ### From source
+
+Rust 1.85.0 or newer is required (the crate is edition 2024).
 
 ```sh
 pkg install rust git
@@ -180,6 +186,9 @@ The on-disk formats, `colors.sh` interoperability and backup behaviour are the
 same as the previous version.
 
 ## Development
+
+Rust 1.85.0 or newer; `1.85.0` is the toolchain CI tests, so a feature that
+needs anything newer needs a `rust-version` bump in `Cargo.toml` first.
 
 ```sh
 pkg install rust
