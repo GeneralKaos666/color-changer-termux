@@ -28,7 +28,7 @@ pub fn read_capped(
     mut on_progress: impl FnMut(u64, Option<u64>),
 ) -> Result<Vec<u8>, String> {
     if announced_total.is_some_and(|total| total > MAX_DOWNLOAD_BYTES) {
-        return Err(too_large());
+        return Err(too_large(MAX_DOWNLOAD_BYTES));
     }
 
     // Pre-size from the advertised length, capped so a lying header cannot
@@ -46,7 +46,7 @@ pub fn read_capped(
         }
         received += n as u64;
         if received > MAX_DOWNLOAD_BYTES {
-            return Err(too_large());
+            return Err(too_large(MAX_DOWNLOAD_BYTES));
         }
         bytes.extend_from_slice(&buf[..n]);
         on_progress(received, announced_total);
@@ -54,10 +54,11 @@ pub fn read_capped(
     Ok(bytes)
 }
 
-fn too_large() -> String {
+/// The message shown when a body is larger than `cap`, in whole megabytes.
+fn too_large(cap: u64) -> String {
     format!(
         "download failed: file is larger than {} MB",
-        MAX_DOWNLOAD_BYTES / (1024 * 1024)
+        cap / (1024 * 1024)
     )
 }
 
@@ -406,12 +407,16 @@ mod tests {
     }
 
     #[test]
-    fn cap_message_is_derived_from_the_constant() {
-        let message = too_large();
-        assert_eq!(message, "download failed: file is larger than 20 MB");
-        assert!(
-            message.contains(&(MAX_DOWNLOAD_BYTES / (1024 * 1024)).to_string()),
-            "{message}"
+    fn cap_message_is_derived_from_the_cap() {
+        assert_eq!(
+            too_large(MAX_DOWNLOAD_BYTES),
+            "download failed: file is larger than 20 MB"
+        );
+        // A different cap must produce a different figure, so the number can
+        // only come from the argument.
+        assert_eq!(
+            too_large(7 * 1024 * 1024),
+            "download failed: file is larger than 7 MB"
         );
     }
 
