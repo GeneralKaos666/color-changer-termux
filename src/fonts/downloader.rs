@@ -254,15 +254,16 @@ pub fn sorted_catalog() -> Vec<(String, String)> {
 /// Download `url`, streaming to memory and reporting progress as
 /// `(received, total)` with `total` from `Content-Length` when present.
 pub fn download(url: &str, on_progress: impl FnMut(u64, Option<u64>)) -> Result<Vec<u8>, String> {
-    let agent = ureq::AgentBuilder::new().timeout(DOWNLOAD_TIMEOUT).build();
-    let response = agent
+    let config = ureq::Agent::config_builder()
+        .timeout_global(Some(DOWNLOAD_TIMEOUT))
+        .build();
+    let agent = ureq::Agent::new_with_config(config);
+    let mut response = agent
         .get(url)
         .call()
         .map_err(|e| format!("download failed: {e}"))?;
-    let total = response
-        .header("Content-Length")
-        .and_then(|value| value.parse::<u64>().ok());
-    read_capped(response.into_reader(), total, on_progress)
+    let total = response.body().content_length();
+    read_capped(response.body_mut().as_reader(), total, on_progress)
 }
 
 /// Validate `bytes` as a font and write them atomically into the library as
@@ -422,6 +423,69 @@ mod tests {
             read_capped(body, None, |_, _| {}).unwrap().len() as u64,
             MAX_DOWNLOAD_BYTES
         );
+    }
+
+    /// Serve exactly one HTTP/1.1 response on `127.0.0.1` and return its URL.
+    ///
+    /// `content_length` is advertised when present; `send_bytes` truncates the
+    /// body actually written, which models a connection that dies early.
+    fn serve_once(
+        status: &str,
+        content_length: Option<usize>,
+        body: &[u8],
+        send_bytes: usize,
+    ) -> String {
+        use std::io::Write;
+        use std::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let status = status.to_owned();
+        let body = body.to_vec();
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = Vec::new();
+            let mut buf = [0u8; 1024];
+            while !request.ends_with(b"\r\n\r\n") {
+                match stream.read(&mut buf) {
+                    Ok(0) | Err(_) => break,
+                    Ok(n) => request.extend_from_slice(&buf[..n]),
+                }
+            }
+            let mut head = format!("HTTP/1.1 {status}\r\nConnection: close\r\n");
+            if let Some(n) = content_length {
+                head.push_str(&format!("Content-Length: {n}\r\n"));
+            }
+            head.push_str("\r\n");
+            stream.write_all(head.as_bytes()).unwrap();
+            let end = send_bytes.min(body.len());
+            stream.write_all(&body[..end]).unwrap();
+            stream.flush().unwrap();
+        });
+        format!("http://{addr}/font.ttf")
+    }
+
+    #[test]
+    fn download_reads_a_body_and_reports_progress() {
+        let url = serve_once("200 OK", Some(4), b"font", 4);
+        let mut progress = Vec::new();
+        let result = download(&url, |received, total| progress.push((received, total))).unwrap();
+        assert_eq!(result, b"font");
+        assert_eq!(progress, vec![(4, Some(4))]);
+    }
+
+    #[test]
+    fn download_reports_a_non_success_status() {
+        let url = serve_once("500 Internal Server Error", Some(4), b"boom", 4);
+        let error = download(&url, |_, _| {}).unwrap_err();
+        assert!(error.starts_with("download failed:"), "{error}");
+    }
+
+    #[test]
+    fn download_reports_a_truncated_body() {
+        let url = serve_once("200 OK", Some(10), b"0123456789", 4);
+        let error = download(&url, |_, _| {}).unwrap_err();
+        assert!(error.starts_with("download failed:"), "{error}");
     }
 
     #[test]
