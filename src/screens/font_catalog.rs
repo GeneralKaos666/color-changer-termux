@@ -53,10 +53,10 @@ impl FontCatalog {
         self.visible = (0..self.entries.len())
             .filter(|&i| self.entries[i].0.to_lowercase().contains(&needle))
             .collect();
-        if let Some(selected) = self.state.selected() {
-            if selected >= self.visible.len() {
-                self.state.select((!self.visible.is_empty()).then_some(0));
-            }
+        if let Some(selected) = self.state.selected()
+            && selected >= self.visible.len()
+        {
+            self.state.select((!self.visible.is_empty()).then_some(0));
         }
     }
 
@@ -92,16 +92,15 @@ impl FontCatalog {
                 if self.downloading {
                     return ScreenAction::status("Download in progress");
                 }
-                if let Some(row) = self.state.selected() {
-                    if let Some(&index) = self.visible.get(row) {
-                        if let Some((name, url)) = self.entries.get(index) {
-                            self.downloading = true;
-                            return ScreenAction::SpawnDownload {
-                                name: name.clone(),
-                                url: url.clone(),
-                            };
-                        }
-                    }
+                if let Some(row) = self.state.selected()
+                    && let Some(&index) = self.visible.get(row)
+                    && let Some((name, url)) = self.entries.get(index)
+                {
+                    self.downloading = true;
+                    return ScreenAction::SpawnDownload {
+                        name: name.clone(),
+                        url: url.clone(),
+                    };
                 }
                 ScreenAction::None
             }

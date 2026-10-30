@@ -347,13 +347,11 @@ impl TerminalEditor {
             (Ok(target), Ok(active)) => target == active,
             _ => false,
         };
-        if !same {
-            if let Err(error) = apply_theme(target, &colors_properties) {
-                return ScreenAction::status(&format!(
-                    "could not activate {}: {error}",
-                    target.display()
-                ));
-            }
+        if !same && let Err(error) = apply_theme(target, &colors_properties) {
+            return ScreenAction::status(&format!(
+                "could not activate {}: {error}",
+                target.display()
+            ));
         }
         self.target = std::fs::canonicalize(target).ok();
         self.base = colors;

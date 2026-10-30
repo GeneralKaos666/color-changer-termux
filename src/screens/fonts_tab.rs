@@ -112,10 +112,10 @@ impl FontsTab {
         }
         match key.code {
             KeyCode::Down | KeyCode::Char('j') => {
-                if let Some(i) = self.state.selected() {
-                    if i + 1 < self.visible.len() {
-                        self.state.select(Some(i + 1));
-                    }
+                if let Some(i) = self.state.selected()
+                    && i + 1 < self.visible.len()
+                {
+                    self.state.select(Some(i + 1));
                 }
                 ScreenAction::None
             }

@@ -17,24 +17,24 @@ pub struct FontEntry {
 fn family_style(path: &std::path::Path, stem: &str) -> (String, String) {
     let family = stem.to_string();
     let style = "Regular".to_string();
-    if let Ok(data) = fs::read(path) {
-        if let Ok(face) = ttf_parser::Face::parse(&data, 0) {
-            let mut fam = family.clone();
-            let mut sty = style;
-            for name in face.names() {
-                if name.name_id == 16 || (name.name_id == 1 && fam == stem) {
-                    if let Some(s) = name.to_string() {
-                        fam = s;
-                    }
-                }
-                if name.name_id == 17 || (name.name_id == 2 && sty == "Regular") {
-                    if let Some(s) = name.to_string() {
-                        sty = s;
-                    }
-                }
+    if let Ok(data) = fs::read(path)
+        && let Ok(face) = ttf_parser::Face::parse(&data, 0)
+    {
+        let mut fam = family.clone();
+        let mut sty = style;
+        for name in face.names() {
+            if (name.name_id == 16 || (name.name_id == 1 && fam == stem))
+                && let Some(s) = name.to_string()
+            {
+                fam = s;
             }
-            return (fam, sty);
+            if (name.name_id == 17 || (name.name_id == 2 && sty == "Regular"))
+                && let Some(s) = name.to_string()
+            {
+                sty = s;
+            }
         }
+        return (fam, sty);
     }
     (family, style)
 }
