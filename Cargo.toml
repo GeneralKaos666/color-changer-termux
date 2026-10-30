@@ -4,6 +4,11 @@ version = "1.1.1"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
+description = "A keyboard-driven TUI for Termux terminal colours, app theme and fonts"
+repository = "https://github.com/GeneralKaos666/termux-settings"
+readme = "README.md"
+keywords = ["termux", "tui", "terminal", "colors", "fonts"]
+categories = ["command-line-utilities", "config"]
 
 [lib]
 name = "termux_settings"
