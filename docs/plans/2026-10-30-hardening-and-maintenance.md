@@ -147,7 +147,7 @@ Change `NF_BASE` to `https://github.com/ryanoasis/nerd-fonts/raw/v3.5.1/patched-
 
 ```bash
 grep -o 'format!("{NF_BASE}[^"]*"' src/fonts/downloader.rs \
-  | sed 's|format!("{NF_BASE}|https://github.com/ryanoasis/nerd-fonts/raw/v3.5.1/patched-fonts|; s|")$||' \
+  | sed 's|^format!("{NF_BASE}|https://github.com/ryanoasis/nerd-fonts/raw/v3.5.1/patched-fonts|; s|"$||' \
   | while read -r url; do
       code=$(curl -s -o /dev/null -w '%{http_code}' -L "$url")
       printf '%s %s\n' "$code" "$url"
