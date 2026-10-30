@@ -144,6 +144,7 @@ family and style); `Esc` clears it, then leaves the screen.
 ### Command line
 
 ```sh
+termux-settings --help                     # print usage and exit
 termux-settings                            # launch the TUI
 termux-settings --list-fonts               # list fonts in ~/.termux/fonts/
 termux-settings --apply-font FiraCode       # install a font to a slot
@@ -160,7 +161,8 @@ markers, and the help bar; the legacy `TERMUX_COLORS_ASCII` and
 
 Exit codes: `--list-fonts` exits `1` when the font library exists but cannot be
 read; `--apply-font` with an unknown name, or `--slot` with an unknown slot,
-exits `2`. Any other error exits `1`.
+exits `2`. Unknown options, unexpected arguments and options missing their value
+are usage errors and also exit `2`. Any other error exits `1`.
 
 ## Relationship to `colors.sh`
 

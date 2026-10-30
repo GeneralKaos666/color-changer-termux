@@ -25,8 +25,29 @@ pub struct Args {
     pub apply_font: Option<String>,
     pub slot: Option<FontSlot>,
     pub version: bool,
+    pub help: bool,
     pub ascii: bool,
 }
+
+/// Usage text printed by `--help` and `-h`.
+pub const HELP: &str = concat!(
+    "termux-settings ",
+    env!("CARGO_PKG_VERSION"),
+    "\n",
+    "A keyboard-driven TUI for Termux colours, app theme and fonts.\n\n",
+    "Usage:\n  termux-settings [options]\n\n",
+    "Options:\n",
+    "  -h, --help              print this help and exit\n",
+    "      --version           print the version and exit\n",
+    "      --list-fonts        list fonts in ~/.termux/fonts/\n",
+    "      --apply-font <name> install a font from the library\n",
+    "      --slot <slot>       regular, bold, italic, bold-italic (default regular)\n",
+    "      --ascii             plain-ASCII glyphs\n\n",
+    "Environment:\n",
+    "  TERMUX_SETTINGS_ASCII   same as --ascii when set to anything but 0\n",
+    "  TERMUX_HOME             override ~/.termux (mainly for tests)\n\n",
+    "Exit codes:\n  0  success\n  1  runtime error\n  2  usage error\n",
+);
 
 impl Args {
     pub fn parse() -> std::result::Result<Self, String> {
@@ -38,35 +59,55 @@ impl Args {
     where
         I: IntoIterator<Item = String>,
     {
+        let argv: Vec<String> = argv.into_iter().collect();
+        if argv.iter().any(|arg| arg == "--help" || arg == "-h") {
+            let mut args = Self {
+                help: true,
+                ..Self::default()
+            };
+            args.apply_ascii_env();
+            return Ok(args);
+        }
+
         let mut args = Args::default();
         let mut argv = argv.into_iter();
         while let Some(arg) = argv.next() {
             match arg.as_str() {
                 "--list-fonts" => args.list_fonts = true,
                 "--apply-font" => {
-                    if let Some(name) = argv.next() {
-                        args.apply_font = Some(name);
-                    }
+                    args.apply_font = Some(
+                        argv.next()
+                            .ok_or_else(|| "--apply-font needs a value".to_owned())?,
+                    );
                 }
                 "--slot" => {
-                    if let Some(slot) = argv.next() {
-                        args.slot = Some(
-                            FontSlot::try_from(slot.as_str()).map_err(|error| error.to_string())?,
-                        );
-                    }
+                    let value = argv
+                        .next()
+                        .ok_or_else(|| "--slot needs a value".to_owned())?;
+                    args.slot = Some(
+                        FontSlot::try_from(value.as_str()).map_err(|error| error.to_string())?,
+                    );
                 }
                 "--version" => args.version = true,
                 "--ascii" => args.ascii = true,
-                _ => {}
+                other if other.starts_with('-') => {
+                    return Err(format!("unknown option: {other}"));
+                }
+                other => return Err(format!("unexpected argument: {other}")),
             }
         }
+        args.apply_ascii_env();
+        Ok(args)
+    }
+
+    /// Honour the legacy and current ASCII environment variables.
+    fn apply_ascii_env(&mut self) {
         if env::var("TERMUX_SETTINGS_ASCII").is_ok_and(|v| v != "0")
             || env::var("TERMUX_COLORS_ASCII").is_ok_and(|v| v != "0")
             || env::var("FONT_CHANGER_ASCII").is_ok_and(|v| v != "0")
         {
-            args.ascii = true;
+            self.ascii = true;
         }
-        Ok(args)
     }
 }
 
@@ -76,6 +117,10 @@ impl Args {
 /// run enters the alternate screen.
 pub fn run(args: Args, paths: &Paths) -> Result<ExitCode> {
     let glyphs = Glyphs::new(args.ascii);
+    if args.help {
+        println!("{HELP}");
+        return Ok(ExitCode::SUCCESS);
+    }
     if args.version {
         println!("termux-settings {}", env!("CARGO_PKG_VERSION"));
         return Ok(ExitCode::SUCCESS);
