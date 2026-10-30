@@ -1,6 +1,6 @@
 # Dependency modernization: design
 
-- **Status:** proposed (design)
+- **Status:** approved (design)
 - **Date:** 2026-10-30
 - **Scope:** phase 2 of the two-phase maintenance pass on `termux-settings`
 - **Applies to:** version `1.1.1` and later
