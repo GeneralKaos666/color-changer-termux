@@ -2,7 +2,7 @@
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::layout::{Constraint, HorizontalAlignment, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Paragraph};
 
@@ -481,7 +481,7 @@ fn render_row(frame: &mut Frame, area: Rect, row: &Row, focused: bool, ui: &Ui) 
     if key_area.width > 0 {
         frame.render_widget(
             Paragraph::new(row.spec.key)
-                .alignment(Alignment::Right)
+                .alignment(HorizontalAlignment::Right)
                 .style(Style::default().fg(ui.palette.muted)),
             key_area,
         );

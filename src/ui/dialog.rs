@@ -2,7 +2,7 @@
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::buffer::Buffer;
-use ratatui::layout::{Alignment, Rect};
+use ratatui::layout::{HorizontalAlignment, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
@@ -165,7 +165,7 @@ impl Dialog {
             .borders(Borders::ALL)
             .border_set(ui.glyphs.border_set())
             .title(format!(" {}", self.title()))
-            .title_alignment(Alignment::Left)
+            .title_alignment(HorizontalAlignment::Left)
             .border_style(Style::default().fg(chrome::accent(ui.palette.dark)))
             .style(
                 Style::default()
@@ -313,7 +313,7 @@ impl Dialog {
             ..inner
         };
         Paragraph::new(Line::from(spans))
-            .alignment(Alignment::Right)
+            .alignment(HorizontalAlignment::Right)
             .render(row, buf);
     }
 }

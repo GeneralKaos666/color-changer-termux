@@ -363,7 +363,7 @@ impl FontsTab {
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
             );
-        let mut list_state = self.state.clone();
+        let mut list_state = self.state;
         frame.render_stateful_widget(list, list_area, &mut list_state);
     }
 }

@@ -386,7 +386,7 @@ impl PresetPicker {
             );
         }
 
-        let mut list_state = self.list.clone();
+        let mut list_state = self.list;
         frame.render_stateful_widget(list, list_area, &mut list_state);
     }
 
