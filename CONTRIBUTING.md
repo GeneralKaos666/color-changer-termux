@@ -4,7 +4,7 @@ Thanks for taking a look. This project is small, so the rules are short.
 
 ## Requirements
 
-- Rust 1.85.0 or newer (`rust-version` in `Cargo.toml`; CI tests that exact
+- Rust 1.88.0 or newer (`rust-version` in `Cargo.toml`; CI tests that exact
   toolchain as well as stable).
 - On Termux: `pkg install rust git`.
 - A terminal at least 40×10 for manual testing of the TUI.

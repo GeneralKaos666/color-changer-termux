@@ -111,7 +111,7 @@ Files: `.github/workflows/ci.yml`, `.github/workflows/release.yml`,
 
 CI (`push`, `pull_request`):
 
-- `test` matrix over `1.85.0` (the declared MSRV) and `stable`, each running
+- `test` matrix over `1.88.0` (the declared MSRV) and `stable`, each running
   `cargo test --locked`. `cargo fmt --check` and
   `cargo clippy --all-targets -- -D warnings` run on `stable` only, keeping the
   MSRV job focused on compilation and tests.
@@ -174,7 +174,7 @@ Dependabot: weekly `cargo` and `github-actions` updates, grouped by ecosystem.
 3. Every Nerd Fonts catalog path resolves at the tag the catalog is pinned to
    (`v3.5.1`, unless the bump is dropped because upstream renames make it
    infeasible).
-4. CI runs tests on `1.85.0` and `stable`, builds both Android ABIs on pull
+4. CI runs tests on `1.88.0` and `stable`, builds both Android ABIs on pull
    requests, and runs an advisory scan.
 5. A release tag whose version differs from `Cargo.toml` fails before building
    or publishing.
@@ -193,6 +193,10 @@ Dependabot: weekly `cargo` and `github-actions` updates, grouped by ecosystem.
 - **MSRV job fails on `1.85.0`.** The declared `rust-version` may already be
   wrong. In that case the job is the finding: raise `rust-version` to the
   actual minimum and record it in the changelog.
+  *Outcome:* the job failed. Two `if ... && let` chains in the source need
+  Rust 1.88, and the `time` patch for RUSTSEC-2026-0009 (`0.3.47`) also
+  requires 1.88, so the MSRV was raised to `1.88.0` rather than the
+  let-chains being rewritten.
 - **Android job slows pull requests.** Mitigated with the existing Rust cache
   and a debug build; if it proves too slow, it can fall back to
   `cargo ndk ... check`.
