@@ -2,7 +2,7 @@
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::layout::{Constraint, HorizontalAlignment, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
@@ -121,9 +121,9 @@ impl MainMenu {
         let header = vec![
             Line::from("change terminal & app colours, live")
                 .style(Style::default().fg(ui.palette.muted))
-                .alignment(Alignment::Center),
+                .alignment(HorizontalAlignment::Center),
             Line::from(""),
-            text::palette_strip(&self.colors).alignment(Alignment::Center),
+            text::palette_strip(&self.colors).alignment(HorizontalAlignment::Center),
             Line::from(""),
             Line::from(vec![
                 Span::styled("active theme  ", Style::default().fg(ui.palette.muted)),
@@ -134,7 +134,7 @@ impl MainMenu {
                         .add_modifier(Modifier::BOLD),
                 ),
             ])
-            .alignment(Alignment::Center),
+            .alignment(HorizontalAlignment::Center),
         ];
 
         let header_height = (header.len() as u16).min(area.height.saturating_sub(MENU_HEIGHT));
@@ -168,7 +168,7 @@ impl MainMenu {
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
             );
-        let mut list_state = self.list.clone();
+        let mut list_state = self.list;
         frame.render_stateful_widget(list, menu_rect, &mut list_state);
     }
 }

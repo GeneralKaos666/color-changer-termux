@@ -61,7 +61,7 @@ impl Glyphs {
 
     /// The border every pane and dialog uses: rounded box-drawing characters,
     /// or a pure-ASCII `+ - |` set.
-    pub fn border_set(self) -> Set {
+    pub fn border_set(self) -> Set<'static> {
         if self.ascii {
             Set {
                 top_left: "+",

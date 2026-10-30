@@ -227,7 +227,7 @@ impl FontCatalog {
                     .add_modifier(Modifier::BOLD),
             )
             .style(Style::default().bg(ui.palette.surface));
-        let mut list_state = self.state.clone();
+        let mut list_state = self.state;
         frame.render_stateful_widget(list, list_rows, &mut list_state);
 
         let footer = match &self.progress {

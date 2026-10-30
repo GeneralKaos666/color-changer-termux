@@ -7,7 +7,7 @@ pub mod glyphs;
 pub mod input;
 pub mod text;
 
-use ratatui::layout::Alignment;
+use ratatui::layout::HorizontalAlignment;
 use ratatui::style::Style;
 use ratatui::widgets::{Block, Borders};
 
@@ -30,7 +30,7 @@ pub fn pane<'a>(ui: &Ui, title: &'a str) -> Block<'a> {
         .borders(Borders::ALL)
         .border_set(ui.glyphs.border_set())
         .title(title)
-        .title_alignment(Alignment::Left)
+        .title_alignment(HorizontalAlignment::Left)
         .border_style(Style::default().fg(chrome::accent(ui.palette.dark)))
         .style(Style::default().bg(ui.palette.surface))
 }

@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Frame;
-use ratatui::layout::{Alignment, Constraint, Layout, Rect};
+use ratatui::layout::{Constraint, HorizontalAlignment, Layout, Rect};
 use ratatui::style::{Modifier, Style};
 use ratatui::text::Span;
 use ratatui::widgets::{Block, Clear, Paragraph};
@@ -209,7 +209,7 @@ impl App {
         if let Some((message, _)) = &self.status {
             frame.render_widget(
                 Paragraph::new(message.as_str())
-                    .alignment(Alignment::Center)
+                    .alignment(HorizontalAlignment::Center)
                     .style(
                         Style::default()
                             .bg(ui.palette.panel)
@@ -299,7 +299,7 @@ impl App {
             Paragraph::new(format!(
                 "terminal too small ({MIN_WIDTH}×{MIN_HEIGHT} minimum)"
             ))
-            .alignment(Alignment::Center)
+            .alignment(HorizontalAlignment::Center)
             .style(Style::default().fg(chrome::accent(self.palette.dark))),
             row,
         );
