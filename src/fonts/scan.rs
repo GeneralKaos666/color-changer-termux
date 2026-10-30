@@ -17,25 +17,25 @@ pub struct FontEntry {
     pub style: String,
 }
 
-/// The last readable string recorded for `id`, matching the previous
-/// parser's last-record-wins order.
-///
 /// A record whose storage cannot be decoded reads back as an empty string, so
-/// empty values are dropped here: the previous parser reported them as absent
-/// and `family_style` fell back to the file stem.
+/// empty values are dropped before the order is applied: the previous parser
+/// skipped those records and `family_style` fell back to the file stem.
+///
+/// The last readable string recorded for `id`, matching the previous parser's
+/// last-record-wins order.
 fn last_name(font: &skrifa::FontRef<'_>, id: StringId) -> Option<String> {
-    font.localized_strings(id)
-        .last()
-        .map(|string| string.to_string())
-        .filter(|value| !value.is_empty())
+    font.localized_strings(id).filter_map(readable).last()
 }
 
 /// The first readable string recorded for `id`.
 fn first_name(font: &skrifa::FontRef<'_>, id: StringId) -> Option<String> {
-    font.localized_strings(id)
-        .next()
-        .map(|string| string.to_string())
-        .filter(|value| !value.is_empty())
+    font.localized_strings(id).filter_map(readable).next()
+}
+
+/// The text of one name record, or `None` when it cannot be decoded.
+fn readable(string: skrifa::string::LocalizedString<'_>) -> Option<String> {
+    let value = string.to_string();
+    (!value.is_empty()).then_some(value)
 }
 
 fn family_style(path: &std::path::Path, stem: &str) -> (String, String) {
@@ -107,20 +107,40 @@ pub fn list_library(paths: &Paths) -> std::io::Result<Vec<FontEntry>> {
 mod tests {
     use super::*;
 
-    /// A font whose only table is a `name` whose typographic-family record
-    /// points past the end of the string storage, so the value cannot be read.
-    fn font_with_an_unreadable_name() -> Vec<u8> {
-        let mut name = Vec::new();
-        name.extend(0u16.to_be_bytes()); // format
-        name.extend(1u16.to_be_bytes()); // count
-        name.extend(18u16.to_be_bytes()); // stringOffset
-        name.extend(3u16.to_be_bytes()); // platformID
-        name.extend(1u16.to_be_bytes()); // encodingID
-        name.extend(0x409u16.to_be_bytes()); // languageID
-        name.extend(16u16.to_be_bytes()); // nameID
-        name.extend(8u16.to_be_bytes()); // length
-        name.extend(4u16.to_be_bytes()); // offset: past the storage
-        name.extend(b"abcd"); // storage, four bytes
+    /// A one-table font whose `name` table holds `records`, each a
+    /// `(nameID, UTF-16BE bytes)`. `None` bytes make the record point past the
+    /// string storage, so its value cannot be decoded.
+    fn font_with_name_records(records: &[(u16, Option<&[u8]>)]) -> Vec<u8> {
+        let mut storage = Vec::new();
+        let mut table = Vec::new();
+        table.extend(0u16.to_be_bytes()); // format
+        table.extend((records.len() as u16).to_be_bytes()); // count
+        table.extend(0u16.to_be_bytes()); // stringOffset, patched below
+
+        let mut encoded = Vec::new();
+        for (id, value) in records {
+            let (offset, length) = match value {
+                Some(bytes) => {
+                    let offset = storage.len();
+                    storage.extend_from_slice(bytes);
+                    (offset, bytes.len())
+                }
+                // Offset 0 with a huge length runs past the storage.
+                None => (0, usize::from(u16::MAX)),
+            };
+            encoded.push((*id, offset, length));
+        }
+        for (id, offset, length) in encoded {
+            table.extend(3u16.to_be_bytes()); // platformID
+            table.extend(1u16.to_be_bytes()); // encodingID
+            table.extend(0x409u16.to_be_bytes()); // languageID
+            table.extend(id.to_be_bytes());
+            table.extend((length as u16).to_be_bytes());
+            table.extend((offset as u16).to_be_bytes());
+        }
+        let string_offset = table.len() as u16;
+        table[4..6].copy_from_slice(&string_offset.to_be_bytes());
+        table.extend(storage);
 
         let offset = 12 + 16;
         let mut data = Vec::new();
@@ -132,24 +152,40 @@ mod tests {
         data.extend(*b"name");
         data.extend(0u32.to_be_bytes());
         data.extend((offset as u32).to_be_bytes());
-        data.extend((name.len() as u32).to_be_bytes());
-        data.extend(name);
+        data.extend((table.len() as u32).to_be_bytes());
+        data.extend(table);
         data
+    }
+
+    /// Write `data` as `Corrupt.ttf` and return its path plus the tempdir it
+    /// lives in.
+    fn write_font(data: &[u8]) -> (tempfile::TempDir, std::path::PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("Corrupt.ttf");
+        std::fs::write(&path, data).unwrap();
+        assert!(skrifa::FontRef::new(data).is_ok(), "the fixture must parse");
+        (dir, path)
     }
 
     #[test]
     fn an_unreadable_name_falls_back_to_the_stem() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("Corrupt.ttf");
-        let data = font_with_an_unreadable_name();
-        std::fs::write(&path, &data).unwrap();
-        assert!(
-            skrifa::FontRef::new(&data).is_ok(),
-            "the fixture must parse"
-        );
+        let data = font_with_name_records(&[(16, None)]);
+        let (_dir, path) = write_font(&data);
         assert_eq!(
             family_style(&path, "Corrupt"),
             ("Corrupt".to_string(), "Regular".to_string())
+        );
+    }
+
+    #[test]
+    fn a_readable_name_survives_a_later_unreadable_one() {
+        // The previous parser kept the last record it could decode, not the
+        // last record in the table.
+        let data = font_with_name_records(&[(16, Some(b"\0F\0o\0o")), (16, None)]);
+        let (_dir, path) = write_font(&data);
+        assert_eq!(
+            family_style(&path, "Corrupt"),
+            ("Foo".to_string(), "Regular".to_string())
         );
     }
 
