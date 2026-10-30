@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `--help` and `-h`, printing usage, environment variables and exit codes.
-- CI runs the test suite on the MSRV (`1.85.0`) as well as stable, builds the
+- CI runs the test suite on the MSRV (`1.88.0`) as well as stable, builds the
   Android binaries on every pull request, and scans for RustSec advisories on a
   weekly schedule.
 - `dependabot` opens grouped weekly updates for Cargo dependencies and GitHub
@@ -28,6 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   usage errors and exit `2` instead of being silently ignored.
 - The Nerd Fonts catalog points at upstream `v3.5.1`, with every path
   re-resolved against that tag after upstream flattened its variant directories.
+- Dependencies are modernised: `ratatui 0.30`, `crossterm 0.29`,
+  `tui-input 0.15` and `ureq 3.5`, and `ttf-parser` is replaced by `skrifa`.
+  Nothing user-visible changes; `ttf-parser` is unmaintained and `skrifa` is
+  its named successor.
+- The release workflow grants write permissions only to the job that attests
+  and publishes; the verification job is read-only.
+
+### Removed
+
+- The public `Paths::backups()` accessor. `Paths::backups_dir()` remains.
 
 ### Fixed
 

@@ -36,8 +36,8 @@ logic of its own.
 │   │   ├── downloader.rs       Nerd Fonts catalog and capped HTTP downloads
 │   │   ├── importer.rs         import a font file from disk
 │   │   ├── prompt.rs           the sample prompt used in font previews
-│   │   ├── scan.rs             discovers installed fonts
-│   │   └── validate.rs         checks that a file is a usable TTF
+│   │   ├── scan.rs             discovers installed fonts, names via `skrifa`
+│   │   └── validate.rs         checks that a file is a usable TTF via `skrifa`
 │   ├── model/
 │   │   ├── app_theme.rs        typed `termux.properties` settings
 │   │   ├── colors.rs           the colours model and its serialisation
@@ -67,6 +67,7 @@ logic of its own.
     ├── colors_io.rs            `colors.properties` round-trips
     ├── library.rs              theme library reads
     ├── paths.rs                `TERMUX_HOME` handling
+    ├── release_version.rs      the release tag gate against `Cargo.toml`
     ├── roundtrip.rs            property-file round-trips
     ├── ui_*.rs                 screen-level behaviour, driven as keystrokes
     ├── fixtures/               golden property files
