@@ -31,7 +31,10 @@ pub fn read_capped(
         return Err(too_large());
     }
 
-    let mut bytes = Vec::new();
+    // Pre-size from the advertised length, capped so a lying header cannot
+    // make us reserve more than the body is allowed to use.
+    let capacity = announced_total.unwrap_or(0).min(MAX_DOWNLOAD_BYTES) as usize;
+    let mut bytes = Vec::with_capacity(capacity);
     let mut received = 0u64;
     let mut buf = [0u8; 8192];
     loop {
@@ -52,7 +55,10 @@ pub fn read_capped(
 }
 
 fn too_large() -> String {
-    "download failed: file is larger than 20 MB".to_owned()
+    format!(
+        "download failed: file is larger than {} MB",
+        MAX_DOWNLOAD_BYTES / (1024 * 1024)
+    )
 }
 
 pub fn nerd_fonts_catalog() -> HashMap<String, String> {
@@ -397,6 +403,23 @@ mod tests {
         .unwrap();
         assert_eq!(bytes, b"font");
         assert_eq!(progress, vec![(4, Some(4))]);
+    }
+
+    #[test]
+    fn cap_message_is_derived_from_the_constant() {
+        let message = too_large();
+        assert_eq!(message, "download failed: file is larger than 20 MB");
+        assert!(
+            message.contains(&(MAX_DOWNLOAD_BYTES / (1024 * 1024)).to_string()),
+            "{message}"
+        );
+    }
+
+    #[test]
+    fn read_capped_presizes_the_buffer_from_the_announced_total() {
+        let bytes = read_capped(Cursor::new(b"font"), Some(64), |_, _| {}).unwrap();
+        assert_eq!(bytes, b"font");
+        assert!(bytes.capacity() >= 64, "capacity {}", bytes.capacity());
     }
 
     #[test]
