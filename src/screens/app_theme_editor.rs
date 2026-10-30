@@ -223,7 +223,7 @@ impl AppThemeEditor {
             (ThemePending::BackupThenWrite { values }, DialogResult::Confirmed(confirmed)) => {
                 if confirmed
                     && let Err(error) =
-                        make_backup(&paths.termux_properties(), &paths.backups(), "termux")
+                        make_backup(&paths.termux_properties(), &paths.backups_dir(), "termux")
                 {
                     return ScreenAction::OpenDialog(Dialog::message(
                         &format!("Could not back up termux.properties: {error}"),

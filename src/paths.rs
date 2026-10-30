@@ -64,15 +64,11 @@ impl Paths {
         self.root.join("termux.properties")
     }
 
-    /// Where timestamped backups are written.
-    pub fn backups(&self) -> PathBuf {
-        self.root.join("backups")
-    }
-
     pub fn fonts_dir(&self) -> PathBuf {
         self.root.join("fonts")
     }
 
+    /// Where timestamped backups are written.
     pub fn backups_dir(&self) -> PathBuf {
         self.root.join("backups")
     }

@@ -22,7 +22,7 @@ fn save_backs_up_then_writes_through_the_link() {
     app.command(Command::Save);
     assert!(app.dialog().is_some());
     app.resolve_dialog(DialogResult::Confirmed(true));
-    assert_eq!(paths.backups().read_dir().unwrap().count(), 1);
+    assert_eq!(paths.backups_dir().read_dir().unwrap().count(), 1);
     assert!(
         std::fs::read_to_string(paths.colors_root().join("dark/T.properties"))
             .unwrap()
