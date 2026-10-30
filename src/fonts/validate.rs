@@ -76,6 +76,26 @@ mod tests {
     }
 
     #[test]
+    fn rejects_empty_data() {
+        assert_eq!(
+            is_valid_font_bytes(b""),
+            (false, "file is too small to be a font".to_string())
+        );
+    }
+
+    #[test]
+    fn rejects_a_valid_signature_with_a_truncated_table_directory() {
+        let data = minimal_ttf();
+        assert!(
+            data.len() > 20,
+            "the fixture must be longer than the prefix"
+        );
+        let (ok, reason) = is_valid_font_bytes(&data[..20]);
+        assert!(!ok, "a truncated font must not validate");
+        assert!(reason.starts_with("cannot parse font:"), "{reason}");
+    }
+
+    #[test]
     fn rejects_an_unknown_signature() {
         let (ok, reason) = is_valid_font_bytes(b"wOFF\x00\x01\x00\x00");
         assert!(!ok);
