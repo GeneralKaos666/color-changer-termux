@@ -92,7 +92,8 @@ sha256sum -c termux-settings-aarch64-linux-android.sha256
 
 ### From source
 
-Rust 1.85.0 or newer is required (the crate is edition 2024).
+Rust 1.88.0 or newer is required (let-chains and the patched `time` release
+both need 1.88).
 
 ```sh
 pkg install rust git
@@ -187,7 +188,7 @@ same as the previous version.
 
 ## Development
 
-Rust 1.85.0 or newer; `1.85.0` is the toolchain CI tests, so a feature that
+Rust 1.88.0 or newer; `1.88.0` is the toolchain CI tests, so a feature that
 needs anything newer needs a `rust-version` bump in `Cargo.toml` first.
 
 ```sh

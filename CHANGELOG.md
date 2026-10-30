@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The minimum supported Rust version is now `1.88.0`. The previous `1.85.0`
+  claim was wrong — the source already used let-chains — and the patched `time`
+  release needs 1.88 as well.
 - Unknown options, unexpected arguments and options missing their value are now
   usage errors and exit `2` instead of being silently ignored.
 - The Nerd Fonts catalog points at upstream `v3.5.1`, with every path
@@ -30,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Font downloads are capped at 20 MB, including when the server omits or
   understates `Content-Length`.
+- `time` is updated past RUSTSEC-2026-0009 (denial of service via stack
+  exhaustion in RFC 2822 parsing).
 
 ## [1.1.1] - 2026-10-26
 
