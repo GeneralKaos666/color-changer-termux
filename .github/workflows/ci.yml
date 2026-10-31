@@ -8,6 +8,11 @@ on:
     # nobody has pushed for a while.
     - cron: "0 6 * * 1"
 
+# Read-only by default so a compromised step cannot write to the repository.
+# The audit job widens this because it files issues and posts check runs.
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
 

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- CI grants the `GITHUB_TOKEN` read-only access by default, widening it only in
+  the advisory job that files issues and posts check runs.
+- The `time` dependency requires 0.3.47 or newer, the release that bounds RFC
+  2822 recursion (RUSTSEC-2026-0009), so a regenerated lockfile cannot resolve
+  to a vulnerable patch release.
+
 ### Changed
 
 - Terminal Colors and Preset Themes stack their panes: the form and the theme
