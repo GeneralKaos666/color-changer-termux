@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-30
+
 ### Added
 
 - `--help` and `-h`, printing usage, environment variables and exit codes.
@@ -34,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its named successor.
 - The release workflow grants write permissions only to the job that attests
   and publishes; the verification job is read-only.
+- `main` requires signed commits and rejects force-pushes and deletion. Rebase
+  and squash merges are disabled because they rewrite commits and drop their
+  GPG signatures.
 
 ### Removed
 
@@ -52,5 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - MIT licence.
 
-[Unreleased]: https://github.com/GeneralKaos666/termux-settings/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/GeneralKaos666/termux-settings/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/GeneralKaos666/termux-settings/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/GeneralKaos666/termux-settings/releases/tag/v1.1.1
