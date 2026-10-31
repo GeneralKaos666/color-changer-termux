@@ -54,8 +54,13 @@ scripts in `scripts/`.
 
 - [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): summary`
   with `type` one of `feat`, `fix`, `refactor`, `docs`, `ci`, `test`, `chore`.
-- Every commit is GPG-signed: `git commit -S`. Unsigned commits are rejected.
+- Every commit is GPG-signed: `git commit -S`. A ruleset on `main` requires
+  signed commits, force-pushes and branch deletion are blocked there, and
+  GitHub reports each commit as Verified only if its key is registered on the
+  account you push with.
 - One logical change per commit; a commit should leave the tests green.
+- Commits merged before the ruleset existed (up to 2026-10-30) are unsigned on
+  `main`. They are left as they are; rewriting `main` would break every clone.
 
 ## Process
 
@@ -66,5 +71,8 @@ scripts in `scripts/`.
 3. Work on a branch, committing as you go, with a test per behaviour change.
 4. Open a pull request. CI must pass on the MSRV and stable, and the Android
    build must succeed.
+5. Merge with a merge commit. Rebase and squash merges rewrite the branch
+   commits and drop their GPG signatures, so the repository no longer accepts
+   them; the merge commit GitHub creates is signed and satisfies the ruleset.
 
 `docs/structure.md` explains where each kind of file belongs.
