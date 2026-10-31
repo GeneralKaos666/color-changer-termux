@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-31
+
 ### Security
 
+- Font downloads are restricted to HTTPS GitHub hosts, imported font names
+  reject path traversal, and atomic writes refuse to follow a symlink or write
+  into `/etc`, `/root`, `/proc` or `/sys`.
 - CI grants the `GITHUB_TOKEN` read-only access by default, widening it only in
   the advisory job that files issues and posts check runs.
 - The `time` dependency requires 0.3.47 or newer, the release that bounds RFC
@@ -83,7 +88,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - MIT licence.
 
-[Unreleased]: https://github.com/GeneralKaos666/termux-settings/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/GeneralKaos666/termux-settings/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/GeneralKaos666/termux-settings/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/GeneralKaos666/termux-settings/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/GeneralKaos666/termux-settings/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/GeneralKaos666/termux-settings/releases/tag/v1.1.1
