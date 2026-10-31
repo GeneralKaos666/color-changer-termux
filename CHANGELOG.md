@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Release builds publish Termux `.deb` packages for `aarch64` and `arm`,
+  attached to the release and uploaded as CI artifacts, so the app can be
+  installed with `pkg install ./termux-settings_*.deb` without adding the APT
+  repository. The release workflow can also be dispatched manually: a branch run
+  only builds and uploads the artifacts, while a run against a tag publishes.
+
 ## [1.2.0] - 2026-10-30
 
 ### Added

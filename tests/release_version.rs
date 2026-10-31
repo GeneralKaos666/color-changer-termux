@@ -46,3 +46,37 @@ fn dependency_version_is_ignored() {
     let output = run_gate("v1.2.3", manifest);
     assert!(output.status.success(), "{output:?}");
 }
+
+/// Run `scripts/crate-version.sh` against a temporary crate manifest.
+fn run_version(manifest: &str) -> Output {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("Cargo.toml"), manifest).unwrap();
+    let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("scripts/crate-version.sh");
+    Command::new("sh")
+        .arg(script)
+        .current_dir(dir.path())
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn version_script_prints_the_package_version() {
+    let output = run_version("[package]\nname = \"x\"\nversion = \"1.2.3\"\n");
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "1.2.3");
+}
+
+#[test]
+fn version_script_ignores_dependency_versions() {
+    let manifest =
+        "[package]\nname = \"x\"\nversion = \"1.2.3\"\n\n[dependencies.foo]\nversion = \"9.9.9\"\n";
+    let output = run_version(manifest);
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "1.2.3");
+}
+
+#[test]
+fn version_script_fails_without_a_package_version() {
+    let output = run_version("[package]\nname = \"x\"\n");
+    assert!(!output.status.success(), "an absent version must fail");
+}

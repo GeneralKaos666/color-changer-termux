@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*"
+  # Manual runs build packages from the selected ref and keep them as workflow
+  # artifacts. Selecting a tag also publishes, which retries a failed release.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,8 +19,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       # A tag that does not match Cargo.toml would publish binaries reporting
-      # the wrong version, so refuse to build at all.
-      - run: sh scripts/check-release-version.sh "$GITHUB_REF_NAME"
+      # the wrong version, so refuse to build at all. A manual run from a branch
+      # has no tag to check; it only produces artifacts.
+      - if: github.ref_type == 'tag'
+        run: sh scripts/check-release-version.sh "$GITHUB_REF_NAME"
       - run: cargo test --locked
 
   android:
@@ -30,6 +35,14 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@v7
+      - id: version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            version=${GITHUB_REF_NAME#v}
+          else
+            version=$(sh scripts/crate-version.sh)
+          fi
+          echo "version=$version" >>"$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi
@@ -51,6 +64,41 @@ jobs:
           "$strip" termux-settings-aarch64-linux-android termux-settings-armv7-linux-androideabi
           sha256sum termux-settings-aarch64-linux-android > termux-settings-aarch64-linux-android.sha256
           sha256sum termux-settings-armv7-linux-androideabi > termux-settings-armv7-linux-androideabi.sha256
+      # The stripped binaries are wrapped as Termux packages so a release can be
+      # installed with `pkg install ./…deb`, without adding the APT repository.
+      - name: Build packages
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          version=$VERSION
+          sh scripts/build-deb.sh "$version" aarch64 termux-settings-aarch64-linux-android .
+          sh scripts/build-deb.sh "$version" arm termux-settings-armv7-linux-androideabi .
+          for deb in termux-settings_*.deb; do
+            sha256sum "$deb" >"$deb.sha256"
+          done
+      # A wrong prefix or architecture would only surface when a user tries to
+      # install, so refuse to publish a package that does not check out.
+      - name: Verify packages
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          version=$VERSION
+          for pair in aarch64:termux-settings_${version}_aarch64.deb arm:termux-settings_${version}_arm.deb; do
+            arch=${pair%%:*}
+            deb=${pair#*:}
+            test "$(dpkg-deb --field "$deb" Package)" = termux-settings
+            test "$(dpkg-deb --field "$deb" Version)" = "$version"
+            test "$(dpkg-deb --field "$deb" Architecture)" = "$arch"
+            dpkg-deb --contents "$deb" >deb.list
+            test "$(grep -c ' \./data/data/com\.termux/files/usr/bin/termux-settings$' deb.list)" -eq 1
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: termux-settings-debs
+          path: |
+            termux-settings_*.deb
+            termux-settings_*.deb.sha256
+          if-no-files-found: error
       # Best effort: a missing attestation should not block a release that has
       # already validated and built cleanly.
       - uses: actions/attest-build-provenance@v4
@@ -59,11 +107,17 @@ jobs:
           subject-path: |
             termux-settings-aarch64-linux-android
             termux-settings-armv7-linux-androideabi
+            termux-settings_*.deb
       - uses: softprops/action-gh-release@v3
+        # Only a tag (pushed or selected for a manual run) has something to
+        # publish; a branch run stops at the artifacts.
+        if: github.ref_type == 'tag'
         with:
           files: |
             termux-settings-aarch64-linux-android
             termux-settings-aarch64-linux-android.sha256
             termux-settings-armv7-linux-androideabi
             termux-settings-armv7-linux-androideabi.sha256
+            termux-settings_*.deb
+            termux-settings_*.deb.sha256
           generate_release_notes: true

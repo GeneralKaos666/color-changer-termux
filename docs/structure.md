@@ -10,14 +10,16 @@ logic of its own.
 ├── .github/
 │   ├── dependabot.yml          weekly grouped cargo + actions updates
 │   └── workflows/
-│       ├── ci.yml              MSRV/stable tests, Android build, advisory scan
-│       └── release.yml         tag gate, Android release build, provenance
+│       ├── ci.yml              MSRV/stable tests, packaging test, Android build, advisory scan
+│       └── release.yml         tag gate, Android release build, .deb packages, manual runs, provenance
 ├── docs/
 │   ├── plans/                  implementation plans, one per feature
 │   ├── specs/                  design documents, one per feature
 │   └── structure.md            this file
 ├── scripts/
-│   └── check-release-version.sh    fails a release tag that disagrees with Cargo.toml
+│   ├── build-deb.sh                wraps a release binary in a Termux .deb
+│   ├── check-release-version.sh    fails a release tag that disagrees with Cargo.toml
+│   └── crate-version.sh            prints the [package] version
 ├── src/
 │   ├── app.rs                  app state, rendering and the message handler
 │   ├── chrome.rs               title, borders, footer help bar
@@ -69,6 +71,8 @@ logic of its own.
     ├── paths.rs                `TERMUX_HOME` handling
     ├── release_version.rs      the release tag gate against `Cargo.toml`
     ├── roundtrip.rs            property-file round-trips
+    ├── scripts/
+    │   └── build_deb_test.sh   package metadata and install path
     ├── ui_*.rs                 screen-level behaviour, driven as keystrokes
     ├── fixtures/               golden property files
     └── support/mod.rs          shared test helpers (`TERMUX_HOME` setup)

@@ -7,15 +7,7 @@ set -eu
 
 tag=${1:?usage: check-release-version.sh <tag>}
 
-version=$(awk '
-  /^\[package\]/ { in_package = 1; next }
-  /^\[/ { in_package = 0 }
-  in_package && /^version[[:space:]]*=/ {
-    gsub(/^version[[:space:]]*=[[:space:]]*"|".*$/, "")
-    print
-    exit
-  }
-' Cargo.toml)
+version=$(sh "$(dirname "$0")/crate-version.sh")
 
 if [ "v$version" != "$tag" ]; then
   printf 'tag %s does not match crate version v%s\n' "$tag" "$version" >&2

@@ -33,6 +33,10 @@ jobs:
         run: cargo fmt --check
       - if: matrix.rust == 'stable'
         run: cargo clippy --locked --all-targets -- -D warnings
+      # The packaging script only runs at release time, but a broken one should
+      # fail here instead of after a tag is pushed.
+      - if: matrix.rust == 'stable'
+        run: sh tests/scripts/build_deb_test.sh
 
   android:
     if: github.event_name != 'schedule'

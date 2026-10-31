@@ -71,6 +71,20 @@ pkg update && pkg install termux-settings
 termux-settings
 ```
 
+### Release package (.deb)
+
+Each release also ships a `.deb` for 64-bit (`aarch64`) and 32-bit (`arm`)
+devices. Download both the package and its `.sha256` from the
+[releases page](https://github.com/GeneralKaos666/termux-settings/releases), then
+install the one matching `uname -m`:
+
+```sh
+pkg install ./termux-settings_*_aarch64.deb
+```
+
+Use `termux-settings_*_arm.deb` when `uname -m` prints `armv7l`. The packages
+install to `$PREFIX/bin`, so `pkg remove termux-settings` uninstalls them.
+
 ### Release binary
 
 Download the asset that matches your device and install it as
