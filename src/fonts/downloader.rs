@@ -262,8 +262,14 @@ pub fn sorted_catalog() -> Vec<(String, String)> {
 /// `(received, total)` with `total` from `Content-Length` when present.
 pub fn download(url: &str, on_progress: impl FnMut(u64, Option<u64>)) -> Result<Vec<u8>, String> {
     // Only allow https downloads from trusted hosts (allow http for tests)
-    if !url.starts_with("https://github.com/") && !url.starts_with("https://raw.githubusercontent.com/") && !url.starts_with("http://127.0.0.1:") && !url.starts_with("http://localhost:") {
-        return Err("download failed: only https downloads from trusted sources are allowed".to_string());
+    if !url.starts_with("https://github.com/")
+        && !url.starts_with("https://raw.githubusercontent.com/")
+        && !url.starts_with("http://127.0.0.1:")
+        && !url.starts_with("http://localhost:")
+    {
+        return Err(
+            "download failed: only https downloads from trusted sources are allowed".to_string(),
+        );
     }
     let config = ureq::Agent::config_builder()
         .timeout_global(Some(DOWNLOAD_TIMEOUT))

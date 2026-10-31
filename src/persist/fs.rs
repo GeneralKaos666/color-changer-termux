@@ -17,29 +17,21 @@ pub fn read_text(path: &Path) -> Result<String> {
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 
-fn is_within_root(path: &Path) -> bool {
-    // Find the root boundary by walking up to find .termux or from env
-    // But we need to be flexible - allow paths under ~/.termux or the configured root
-    // For security, ensure the path doesn't escape to unexpected locations
-    // We'll rely on the caller to pass paths under the root, but add checks
-    true
-}
-
 fn ensure_safe_path(path: &Path) -> Result<()> {
-    // Resolve the path to catch symlink escapes
-    if path.is_symlink() {
-        if let Ok(canon) = path.canonicalize() {
-            // Check if it's trying to escape common sensitive directories
-            let s = canon.to_string_lossy();
-            if s.contains("/etc/") || s.contains("/root/") || s.starts_with("/proc/") || s.starts_with("/sys/") {
-                return Err(Error::Invalid(format!("refusing to write outside allowed directory")));
-            }
-        }
-    } else if let Ok(canon) = path.canonicalize() {
-        let s = canon.to_string_lossy();
-        if s.contains("/etc/") || s.contains("/root/") || s.starts_with("/proc/") || s.starts_with("/sys/") {
-            return Err(Error::Invalid(format!("refusing to write outside allowed directory")));
-        }
+    // Resolve the path so a symlink cannot redirect a write into a system
+    // location; a path that does not exist yet has nothing to resolve.
+    let Ok(canon) = path.canonicalize() else {
+        return Ok(());
+    };
+    let s = canon.to_string_lossy();
+    if s.contains("/etc/")
+        || s.contains("/root/")
+        || s.starts_with("/proc/")
+        || s.starts_with("/sys/")
+    {
+        return Err(Error::Invalid(
+            "refusing to write outside allowed directory".to_string(),
+        ));
     }
     Ok(())
 }
@@ -90,8 +82,14 @@ fn resolve(path: &Path) -> Result<PathBuf> {
         let canon = fs::canonicalize(path)?;
         // Additional safety: ensure resolved target doesn't escape sensitive areas
         let s = canon.to_string_lossy();
-        if s.starts_with("/etc/") || s.starts_with("/root/") || s.starts_with("/proc/") || s.starts_with("/sys/") {
-            return Err(crate::error::Error::Invalid("refusing to follow symlink outside allowed directory".to_string()));
+        if s.starts_with("/etc/")
+            || s.starts_with("/root/")
+            || s.starts_with("/proc/")
+            || s.starts_with("/sys/")
+        {
+            return Err(crate::error::Error::Invalid(
+                "refusing to follow symlink outside allowed directory".to_string(),
+            ));
         }
         Ok(canon)
     } else {
