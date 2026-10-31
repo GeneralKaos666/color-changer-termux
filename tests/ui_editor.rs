@@ -58,3 +58,37 @@ fn tab_and_arrows_move_focus_and_scroll_keeps_it_visible() {
     }
     assert!(editor.scroll > 0);
 }
+
+#[test]
+fn form_sits_above_the_preview() {
+    let mut app = editor_app();
+    let text = render_text(&mut app, 100, 40);
+    let form = support::row_of(&text, " terminal colors").expect("a form pane title");
+    let preview = support::row_of(&text, " preview").expect("a preview pane title");
+    assert!(
+        form < preview,
+        "form row {form} is not above preview row {preview}"
+    );
+    assert_eq!(
+        support::column_of(&text, " terminal colors"),
+        support::column_of(&text, " preview"),
+        "both panes start at the same column"
+    );
+    assert!(
+        text.contains("live preview"),
+        "the preview content is drawn"
+    );
+    assert!(text.contains("background"), "the preview keeps its samples");
+    assert!(text.contains("cursor"), "the whole swatch grid fits");
+}
+
+#[test]
+fn a_short_terminal_gives_the_whole_area_to_the_form() {
+    let mut app = editor_app();
+    let text = render_text(&mut app, 40, 10);
+    assert!(text.contains(" terminal colors"));
+    assert!(
+        !text.contains(" preview"),
+        "the preview is dropped when it cannot fit"
+    );
+}

@@ -22,13 +22,21 @@ use crate::screens::ScreenAction;
 use crate::ui::focus::{Move, list_move};
 use crate::ui::input::Field;
 use crate::ui::text;
-use crate::ui::{Ui, pane};
+use crate::ui::{Ui, pane, stacked};
 
 /// Rows a page key jumps in the theme list.
 const PAGE: usize = 10;
 
 /// How many mock-session lines the preview shows.
 const PREVIEW_LINES: usize = 5;
+
+/// Rows the preview's content occupies: the theme name, the mock session, the
+/// swatch grid, the palette strip and the path, with a blank row between them.
+const PREVIEW_CONTENT_ROWS: u16 = 17;
+
+/// Rows the list keeps before the preview starts shrinking: both borders, the
+/// filter line and a few themes.
+const MIN_LIST_PANE_ROWS: u16 = 8;
 
 /// Which region of the picker has the keyboard.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -305,10 +313,7 @@ impl PresetPicker {
             ),
             area,
         );
-        let [list_area, preview_area] =
-            Layout::horizontal([Constraint::Percentage(42), Constraint::Percentage(58)])
-                .spacing(1)
-                .areas(area);
+        let (list_area, preview_area) = stacked(area, PREVIEW_CONTENT_ROWS + 2, MIN_LIST_PANE_ROWS);
         self.render_list(frame, list_area, ui);
         self.render_preview(frame, preview_area, ui);
     }

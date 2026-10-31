@@ -147,3 +147,27 @@ fn apply_failure_reports_and_keeps_the_old_link() {
         applied
     );
 }
+
+#[test]
+fn the_list_sits_above_the_preview() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut app = App::new(Paths::new(dir.path()));
+    open_picker(&mut app);
+    let text = render_text(&mut app, 100, 40);
+    let list = support::row_of(&text, " themes (").expect("a list pane title");
+    let preview = support::row_of(&text, " preview").expect("a preview pane title");
+    assert!(
+        list < preview,
+        "list row {list} is not above preview row {preview}"
+    );
+    assert_eq!(
+        support::column_of(&text, " themes ("),
+        support::column_of(&text, " preview"),
+        "both panes start at the same column"
+    );
+    assert!(text.contains("user@termux"), "the preview content is drawn");
+    assert!(
+        text.contains(".properties"),
+        "the preview's last line fits in its pane"
+    );
+}

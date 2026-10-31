@@ -41,6 +41,16 @@ pub fn render_text(app: &mut App, width: u16, height: u16) -> String {
     text
 }
 
+/// The 0-based row of the first rendered line that contains `needle`.
+pub fn row_of(text: &str, needle: &str) -> Option<usize> {
+    text.lines().position(|line| line.contains(needle))
+}
+
+/// The 0-based column where `needle` first appears in the rendered text.
+pub fn column_of(text: &str, needle: &str) -> Option<usize> {
+    text.lines().filter_map(|line| line.find(needle)).min()
+}
+
 /// Open the preset picker from the main menu.
 pub fn open_picker(app: &mut App) {
     app.handle_key(key(KeyCode::Enter));

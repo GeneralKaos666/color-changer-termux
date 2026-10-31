@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout, Rect};
+use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Paragraph};
@@ -20,7 +20,7 @@ use crate::ui::dialog::{Dialog, DialogResult};
 use crate::ui::form;
 use crate::ui::input::Field;
 use crate::ui::text;
-use crate::ui::{Ui, pane};
+use crate::ui::{Ui, pane, stacked};
 
 /// Number of editable fields: background, foreground, cursor and the palette.
 pub const FIELD_COUNT: usize = 3 + PALETTE_SIZE;
@@ -41,6 +41,14 @@ const FORM_ROWS: usize = ANSI_ROW + 1 + PALETTE_SIZE;
 
 /// How many mock-session lines the preview shows.
 const PREVIEW_LINES: usize = 7;
+
+/// Rows the preview's content occupies: its heading, the mock session, the
+/// swatch grid and the palette strip, with a blank row between each block.
+const PREVIEW_CONTENT_ROWS: u16 = 17;
+
+/// Rows the form keeps before the preview starts shrinking: both borders, the
+/// `basics` rule and its three fields.
+const MIN_FORM_PANE_ROWS: u16 = 8;
 
 /// The step a dialog answer resumes, set just before the dialog opens.
 #[derive(Clone, Debug)]
@@ -87,6 +95,11 @@ pub fn sanitize_name(name: &str) -> String {
     } else {
         cleaned.to_owned()
     }
+}
+
+/// Split `area` into the form on top and the preview below.
+fn stacked_areas(area: Rect) -> (Rect, Rect) {
+    stacked(area, PREVIEW_CONTENT_ROWS + 2, MIN_FORM_PANE_ROWS)
 }
 
 /// The terminal colour editor's state.
@@ -391,7 +404,7 @@ impl TerminalEditor {
         }
     }
 
-    /// Draw the form and the preview.
+    /// Draw the form above the preview.
     pub fn render(&self, frame: &mut Frame, area: Rect, ui: &Ui) {
         frame.render_widget(
             Block::default().style(
@@ -401,20 +414,14 @@ impl TerminalEditor {
             ),
             area,
         );
-        let [form_area, preview_area] =
-            Layout::horizontal([Constraint::Percentage(52), Constraint::Percentage(48)])
-                .spacing(1)
-                .areas(area);
+        let (form_area, preview_area) = stacked_areas(area);
         self.render_form(frame, form_area, ui);
         self.render_preview(frame, preview_area, ui);
     }
 
     /// Re-derive the visible row count after a resize.
     pub fn on_resize(&mut self, area: Rect) {
-        let [form_area, _preview_area] =
-            Layout::horizontal([Constraint::Percentage(52), Constraint::Percentage(48)])
-                .spacing(1)
-                .areas(area);
+        let (form_area, _) = stacked_areas(area);
         self.visible_rows = form_area.height.saturating_sub(2) as usize;
         self.scroll_to_focus();
     }
@@ -427,7 +434,10 @@ impl TerminalEditor {
         if inner.width == 0 || inner.height == 0 {
             return;
         }
-        let end = (self.scroll + self.visible_rows).min(FORM_ROWS);
+        // Never draw past the pane: `visible_rows` is only updated by
+        // `on_resize`, so it can still hold the pre-measure default.
+        let visible = self.visible_rows.min(inner.height as usize);
+        let end = (self.scroll + visible).min(FORM_ROWS);
         for row in self.scroll..end {
             let row_area = Rect {
                 x: inner.x,

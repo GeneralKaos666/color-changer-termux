@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Terminal Colors and Preset Themes stack their panes: the form and the theme
+  list now sit above the live preview instead of beside it, so both use the
+  full terminal width. The preview keeps its natural height while the pane
+  above it scrolls, and on terminals too short for both the preview is dropped
+  so the form or list keeps the whole area.
+
 ## [1.2.1] - 2026-10-30
 
 ### Added
