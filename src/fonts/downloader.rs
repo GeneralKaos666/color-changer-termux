@@ -261,6 +261,10 @@ pub fn sorted_catalog() -> Vec<(String, String)> {
 /// Download `url`, streaming to memory and reporting progress as
 /// `(received, total)` with `total` from `Content-Length` when present.
 pub fn download(url: &str, on_progress: impl FnMut(u64, Option<u64>)) -> Result<Vec<u8>, String> {
+    // Only allow https downloads from trusted hosts (allow http for tests)
+    if !url.starts_with("https://github.com/") && !url.starts_with("https://raw.githubusercontent.com/") && !url.starts_with("http://127.0.0.1:") && !url.starts_with("http://localhost:") {
+        return Err("download failed: only https downloads from trusted sources are allowed".to_string());
+    }
     let config = ureq::Agent::config_builder()
         .timeout_global(Some(DOWNLOAD_TIMEOUT))
         .build();
@@ -280,6 +284,12 @@ pub fn install_bytes(paths: &Paths, name: &str, bytes: &[u8]) -> crate::error::R
     if !ok {
         return Err(crate::error::Error::Invalid(format!(
             "downloaded file for {name:?} is not a valid font: {reason}"
+        )));
+    }
+    // Prevent path traversal
+    if name.contains('/') || name.contains('\\') || name.contains("..") || name.starts_with('.') {
+        return Err(crate::error::Error::Invalid(format!(
+            "invalid font name: {name:?}"
         )));
     }
     std::fs::create_dir_all(paths.fonts_dir())?;

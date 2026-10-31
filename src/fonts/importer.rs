@@ -94,7 +94,9 @@ pub fn import_file(paths: &Paths, src: &Path, clash: &str) -> crate::error::Resu
     }
     let dest_dir = paths.fonts_dir();
     fs::create_dir_all(&dest_dir)?;
-    let dest = dest_dir.join(src.file_name().unwrap_or_default());
+    let filename = src.file_name().unwrap_or_default();
+    // Ensure we only take the basename
+    let dest = dest_dir.join(filename);
     if same_file(src, &dest) {
         return Ok(dest);
     }

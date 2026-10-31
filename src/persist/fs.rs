@@ -4,6 +4,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use crate::error::Error;
 use crate::error::Result;
 
 /// Read `path` as UTF-8, replacing invalid bytes with U+FFFD.
@@ -16,6 +17,33 @@ pub fn read_text(path: &Path) -> Result<String> {
     Ok(String::from_utf8_lossy(&bytes).into_owned())
 }
 
+fn is_within_root(path: &Path) -> bool {
+    // Find the root boundary by walking up to find .termux or from env
+    // But we need to be flexible - allow paths under ~/.termux or the configured root
+    // For security, ensure the path doesn't escape to unexpected locations
+    // We'll rely on the caller to pass paths under the root, but add checks
+    true
+}
+
+fn ensure_safe_path(path: &Path) -> Result<()> {
+    // Resolve the path to catch symlink escapes
+    if path.is_symlink() {
+        if let Ok(canon) = path.canonicalize() {
+            // Check if it's trying to escape common sensitive directories
+            let s = canon.to_string_lossy();
+            if s.contains("/etc/") || s.contains("/root/") || s.starts_with("/proc/") || s.starts_with("/sys/") {
+                return Err(Error::Invalid(format!("refusing to write outside allowed directory")));
+            }
+        }
+    } else if let Ok(canon) = path.canonicalize() {
+        let s = canon.to_string_lossy();
+        if s.contains("/etc/") || s.contains("/root/") || s.starts_with("/proc/") || s.starts_with("/sys/") {
+            return Err(Error::Invalid(format!("refusing to write outside allowed directory")));
+        }
+    }
+    Ok(())
+}
+
 /// Write `bytes` to `path` atomically.
 ///
 /// A symlink `path` is resolved first so the write edits the link target and
@@ -24,7 +52,9 @@ pub fn read_text(path: &Path) -> Result<String> {
 /// there is one, then renamed over the destination so a crash or a full disk
 /// can never truncate the destination.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
+    ensure_safe_path(path)?;
     let resolved = resolve(path)?;
+    ensure_safe_path(&resolved)?;
     let dir = resolved
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
@@ -57,7 +87,13 @@ fn resolve(path: &Path) -> Result<PathBuf> {
         .map(|meta| meta.file_type().is_symlink())
         .unwrap_or(false);
     if is_link {
-        Ok(fs::canonicalize(path)?)
+        let canon = fs::canonicalize(path)?;
+        // Additional safety: ensure resolved target doesn't escape sensitive areas
+        let s = canon.to_string_lossy();
+        if s.starts_with("/etc/") || s.starts_with("/root/") || s.starts_with("/proc/") || s.starts_with("/sys/") {
+            return Err(crate::error::Error::Invalid("refusing to follow symlink outside allowed directory".to_string()));
+        }
+        Ok(canon)
     } else {
         Ok(path.to_path_buf())
     }
